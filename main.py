@@ -2,6 +2,10 @@ from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 import pickle
 import os.path
+import usb
+
+# Global Variables
+ioreg_file = "ioreg_file.p"
 
 # Load cached JSON object of album size
 cache_file = "album_cache.p"
@@ -23,12 +27,24 @@ def pickle_albums():
     with open(cache_file, "wb") as fp:
         pickle.dump(album_cache, fp)
 
+def pickle_ioreg(ioreg_device):
+    with open(ioreg_file, "wb") as fp:
+        pickle.dump(ioreg_device, fp)
+
+def load_ioreg():
+    if os.path.isfile(ioreg_file):
+        with open(ioreg_file, "rb") as fp:
+            ioreg_device = pickle.load(fp)
+        return ioreg_device
+    else:
+        return None
+
 def list_folder(drive, folder_id):
     # folder_id: GoogleDriveFile['id']
     _q = {'q': "'{}' in parents and trashed=false".format(folder_id)}
     return drive.ListFile(_q).GetList()
 
-def get_artist_id_size(drive, artist_id):
+def get_artist_size(drive, artist_id):
     """
     artist_id: string containing GoogleDriveFile id of an artist_id folder
     """
@@ -42,19 +58,19 @@ def get_artist_id_size(drive, artist_id):
             size += album_size
     return size 
 
-def get_album_id_size_cache(album_id):
+def get_album_size_cache(album_id):
     """
     Turns out getting the size of each album_id thru drive takes forever
     So we're caching them.
     album_id: string containing GoogleDriveFile id of an album_id folder
     Returns None if not found in cahce
     """
-    if album_id in album_id_cache:
-        return album_id_cache[album_id]
+    if album_id in album_cache:
+        return album_cache[album_id]
     else:
         return None
     
-def get_album_id_size_drive(drive, album_id):
+def get_album_size_drive(drive, album_id):
     """
     album_id: string containing GoogleDriveFile id of an album_id folder
     """
@@ -64,7 +80,7 @@ def get_album_id_size_drive(drive, album_id):
         file_size = int(track["quotaBytesUsed"])
         if file_size is not None:
             size += file_size
-    album_id_cache[album_id] = size
+    album_cache[album_id] = size
     return size
 
 def login():
@@ -104,11 +120,28 @@ def get_file_size_recursive(drive, folder):
     return size
 
 def main():
+    # Drive Stuff
     gauth = login()
     drive = GoogleDrive(gauth)
     folder = 'Music'
-    drive_size = get_file_size_recursive(drive, folder)
-    print("Your music takes up {0} Kib, {1} Gb of space.".format(drive_size/1024/1024,drive_size/1000/1000/1000)) 
+    #drive_size = get_file_size_recursive(drive, folder)
+    #print("Your music takes up {0} Kib, {1} Gb of space.".format(drive_size/1024/1024,drive_size/1000/1000/1000)) 
+    
+    #USB Stuff
+    ioreg_device = load_ioreg()
+    if not ioreg_device:
+        ioreg_device = usb.pick_from_ioreg()
+    df_device = usb.pick_from_df()
+
+    print "You picked this device from IOREG: {}".format(ioreg_device)
+    print "You picked this device from DF: {}".format(df_device)
+
+    # We can pickle the IOREG stuff because it's invariant
+    # But we can't be sure that df will be the same.
+    # We could guess at the filesize but that's risky
+    # Need to research if there's a (reliable) link between df and IOREG
+    pickle_ioreg(ioreg_device)
+    # do this at the end of the program
     pickle_albums()
 
 if __name__ == '__main__':
