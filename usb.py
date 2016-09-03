@@ -3,7 +3,7 @@
 # Author: J. Plasmeier | jplasmeier@gmail.com
 # License: MIT License
 from subprocess import call, check_output
-import re, pprint
+import os, re, pprint
 
 df_info = {}
 device_info = {}
@@ -56,15 +56,12 @@ def print_dict_list(dict_to_print):
 # Expose these functions to main
 def pick_from_df():
     df_devices = get_df_devices() 
-    for idx, dev in enumerate(df_devices):
-        print "Device {0}: ".format(idx)
-        df_devices[dev].append(idx)
-        print df_devices[dev]
-        #pprint.pprint(df_devices[dev])
-    # prompt user selection
-    choice = int(raw_input("Enter the number of the device which you would like to sync:"))
-    print df_devices[dev][-1:]
-    return [df_devices[dev] for dev in df_devices if df_devices[dev][-1:] == [choice]]
+    if len(df_devices) == 1:
+        for dev in df_devices:
+            return df_devices[dev][-1]
+    else:
+        # not implemented yet
+        return df_devices
 
 def pick_from_ioreg():
     ioreg_devices = get_ioreg_devices() 
@@ -75,3 +72,23 @@ def pick_from_ioreg():
     # prompt user selection
     choice = int(raw_input("Enter the number of the device which you would like to sync:"))
     return [ioreg_devices[dev] for dev in ioreg_devices if ioreg_devices[dev]["Device"] == choice]
+
+def get_usb_collection(device_path):
+    """
+    Get the dict of Artist - Album[] pairs from the path selected before.
+    TODO: Refactor this 6 indents shit
+    """
+    usb_collection = {} 
+    artists = os.listdir(device_path)
+
+    for artist in artists:
+        artist_path = device_path + '/' + artist
+        # Only grab directories and non-hidden files
+        if os.path.isdir(artist_path) and not artist.startswith('.'):
+            albums_and_files = os.listdir(artist_path)
+            for album_candidate in albums_and_files:
+                if os.path.isdir(artist_path + '/' + album_candidate):
+                    if artist not in usb_collection:
+                        usb_collection[artist] = [] 
+                    usb_collection[artist].append(album_candidate)
+    return usb_collection
