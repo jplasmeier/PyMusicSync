@@ -79,7 +79,10 @@ def get_usb_collection(device_path):
     TODO: Refactor this 6 indents shit
     """
     usb_collection = {} 
-    artists = os.listdir(device_path)
+    try:
+        artists = os.listdir(device_path)
+    except:
+        print "Error accessing USB device."
 
     for artist in artists:
         artist_path = device_path + '/' + artist

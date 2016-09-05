@@ -53,7 +53,6 @@ def get_file_ext_type(drive_file):
     else:
         return 'other'
     
-
 def pickle_albums():
     """
     Why is this a separate function and the above code is not?
@@ -164,43 +163,102 @@ def get_file_size_recursive(drive, folder):
     return size
 
 def check_drive_not_in_usb_collection(drive_collection, usb_collection):
-    print "Checking for music not on USB device"
+    missing_from_usb_collection = {}
     for artist in drive_collection:
         if artist not in usb_collection:
-            print "Artist {0} missing from your device.".format(artist)
             #TODO: investigate performance of caching lookup (save the list locally instead of looking up artist again)
-            # Print the albums missing
+            missing_from_usb_collection[artist] = []
             for album in drive_collection[artist]:
-                print "Album {0} missing from your device.".format(album)
+                missing_from_usb_collection[artist].append(album)
         else:
             for album in drive_collection[artist]:
                 if album not in usb_collection[artist]:
-                    print "Album {0} missing from your device.".format(album)
+                    if artist not in missing_from_usb_collection:
+                        missing_from_usb_collection[artist] = []
+                    missing_from_usb_collection[artist].append(album)
+    return missing_from_usb_collection
 
 def check_usb_not_in_drive_collection(drive_collection, usb_collection):
-    print "Checking for music not in Drive"
+    missing_from_drive_collection = {}
     for artist in usb_collection:
         if artist not in drive_collection:
-            print "Artist {0} missing from your drive.".format(artist)
+            missing_from_drive_collection[artist] = []
             #TODO: investigate performance of caching lookup (save the list locally instead of looking up artist again)
-            # Print the albums missing
             for album in usb_collection[artist]:
-                print "     Album {0} missing from your drive.".format(album)
+                missing_from_drive_collection[artist].append(album)
         else:
             for album in usb_collection[artist]:
                 if album not in drive_collection[artist]:
-                    print "Album {0} from artist {1} missing from your drive.".format(album, artist)
+                    if artist not in missing_from_drive_collection:
+                        missing_from_drive_collection[artist] = []
+                    missing_from_drive_collection[artist].append(album)
+    return missing_from_drive_collection
 
 def clean_unicode(collection):
     clean_dict = {}
     for k in collection:
         k_clean = codecs.utf_8_decode(k.encode('utf-8'))
-#        k_clean = k.decode('utf-8','replace')
         clean_dict[k_clean] = []
         for a in collection[k]:
-#            clean_dict[k_clean].append(a.decode('utf-8','replace'))
             clean_dict[k_clean].append(codecs.utf_8_decode(a.encode('utf-8')))
     return clean_dict
+
+def print_collection(collection):
+    for artist in collection:
+        print "Artist: {}".format(artist)
+        for album in collection[artist]:
+            print "---Album: {}".format(album)
+
+def find_possible_duplicate_albums(missing_from_usb, missing_from_drive):
+    """
+    Sometimes, usually due to unicode fuckery, albums will be compared as inequal even though they are.
+    This function looks for strings that differ due to unicode characters
+    Or are substrings of each other.
+    """
+    for artist in list(missing_from_usb.keys()):
+        if artist in missing_from_drive:
+            for album in missing_from_usb[artist]:
+                for drive_album in missing_from_drive[artist]:
+                    if check_duplicate_string(drive_album, album):
+                        print "Detected false positive: {0} and {1}".format(drive_album, album)
+                        missing_from_usb[artist].remove(album)
+                        missing_from_drive[artist].remove(drive_album)
+                        if not missing_from_usb[artist]:
+                            del missing_from_usb[artist]
+                        if not missing_from_drive[artist]:
+                            del missing_from_drive[artist]
+
+    return missing_from_usb, missing_from_drive
+
+def check_duplicate_string(s1, s2):
+    """
+    Check for the approximate equality of strings
+    Do this by comparing character freuqency
+    """
+    chars_s1 = {}
+    chars_s2 = {}
+    shared = {}
+    for c in str(s1):
+        if c not in chars_s1:
+            chars_s1[c] = 0
+        chars_s1[c] += 1
+    for c in str(s2):
+        if c not in chars_s2:
+            chars_s2[c] = 0
+        chars_s2[c] += 1
+    keys_s1 = set(chars_s1.keys())
+    keys_s2 = set(chars_s2.keys())
+    shared = keys_s1 & keys_s2
+    if len(shared) > 0.7*len(keys_s1) or len(shared) > 0.7*len(keys_s2):
+        return True
+    else:
+        return False
+
+def fix_possible_duplicate_albums(missing_from_usb, missing_from_drive):
+    """
+    Update files to match
+    """
+    pass
 
 def main():
     # Drive Stuff
@@ -222,32 +280,26 @@ def main():
     
     global drive_collection
     drive_collection= clean_unicode(drive_collection)
-    # Both collections are now filled with the same schema
-    # First check MP3 against drive
-    artist_strs = [a for a in drive_collection if isinstance(a, str)]
-    for artist in artist_strs:
-        if artist not in usb_collection:
-            print "Artist {0} missing from your device.".format(artist)
-        #TODO: investigate performance of caching lookup (save the list locally instead of looking up artist again)
-        for album in drive_collection[artist]:
-            if album not in usb_collection[artist]:
-                print "Album {0} missing from your device.".format(album)
     
-    check_drive_not_in_usb_collection(drive_collection, usb_collection) 
-    check_usb_not_in_drive_collection(drive_collection, usb_collection)
+    missing_from_usb = check_drive_not_in_usb_collection(drive_collection, usb_collection) 
+    missing_from_drive = check_usb_not_in_drive_collection(drive_collection, usb_collection)
+    
+    missing_from_usb, missing_from_drive = find_possible_duplicate_albums(missing_from_usb, missing_from_drive)
+
+    print "The following are missing from your USB device"
+    print_collection(missing_from_usb)
+    print "The following are missing from your Drive"
+    print_collection(missing_from_drive)
+
     # Epilogue
-    
     if audio_in_artist:
         print "Heads up, you have audio files directly in the following artists."
         print "You should put them in a folder by album instead."
         print sorted(audio_in_artist)
 
-    # We can pickle the IOREG stuff because its serial no. is invariant
-    # But we can't be sure that its mount point in df will be the same.
-    # We could guess at the filesize but that's risky
+    # We can pickle the IOREG stuff because its serial no. is invariant, but we can't be sure that its mount point in df will be the same.
     # Need to research if there's a (reliable) link between df and IOREG
     pickle_ioreg(ioreg_device)
-    # do this at the end of the program
     pickle_albums()
 
 if __name__ == '__main__':
