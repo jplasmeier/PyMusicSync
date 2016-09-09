@@ -11,4 +11,11 @@ This tool is meant to augment the official Google tool when you have a tiny lapt
 
 This software is currently in pre-Alpha and will almost certainly not work on your computer. 
 
+### Running PyMusicSync
+Install requirements from requirements.txt
+python2.7 music\_sync/music\_sync.py
+
+Currently the Google Drive folder containing your files is hardcoded so you probably want to change it.
+The directory structure is hard coded as well. I'm working on fixing this eventually to be more abstract.
+
 ### License: MIT License

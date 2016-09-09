@@ -8,6 +8,52 @@ import os, re, pprint
 df_info = {}
 device_info = {}
 
+class DF_Device:
+    """
+    Class to store information about a device from df
+    """
+
+    #def __init__(self, filesystem, size, used, avail, capacity, iused, ifree, pct_iused, mounted_on):
+    #    self.filesystem = filesystem
+    #    self.size = size
+    #    self.used = used
+    #    self.avail = avail
+    #    self.capacity = capacity
+    #    self.iused = iused
+    #    self.ifree = ifree
+    #    self.pct_iused = pct_iused
+    #    self.mounted_on = mounted_on
+    
+    def __init__(self, identifier):
+        self.identifier = identifier
+
+    def set_df_info(self, df_list):
+        self.filesystem = df_list[0] 
+        self.size = df_list[1]
+        self.used = df_list[2]
+        self.avail = df_list[3]
+        self.capacity = df_list[4]
+        self.iused = df_list[5]
+        self.ifree = df_list[6]
+        self.pct_iused = df_list[7]
+        self.mounted_on = df_list[8]
+
+    def get_free_space(self):
+        return self.avail
+
+class USB_Device:
+    """
+    Class to keep track of USB device information.
+    """
+    
+    def __init__(self, nickname):
+        self.IOReg_info = {}
+        self.DF_info = {}
+        self.nickname = nickname
+
+    def get_free_space(self):
+        return self.DF_info['Avail']
+
 def get_usb_devices_ioreg():
     result = check_output(["ioreg", "-p", "IOUSB", "-l", "-w", "0"])
     results = result.split("+-o")
@@ -39,15 +85,20 @@ def get_ioreg_devices():
     return ioreg_info
 
 def get_df_devices():
+    """
+    Should return a list of DF objects.
+    """
     df_info = {}
-    #result = check_output(["df", "-h"]) 
-    result = check_output(["df", "-h", "-T", "exfat"]) 
+    result = check_output(["df", "-k", "-T", "exfat"]) 
     results = result.split("\n")
-    for res in results:
+    df_objects = []
+    for res in results[1:]:
         tokens = res.split()
-        if tokens != [] and tokens[0] != 'Filesystem':
-            df_info[tokens[0]] = tokens
-    return df_info
+        if len(tokens) >= 9:
+            df_obj = DF_Device(tokens[8])
+            df_obj.set_df_info(tokens)
+            df_objects.append(df_obj)
+    return df_objects
 
 def print_dict_list(dict_to_print):
     for key in dict_to_print:
@@ -57,11 +108,10 @@ def print_dict_list(dict_to_print):
 def pick_from_df():
     df_devices = get_df_devices() 
     if len(df_devices) == 1:
-        for dev in df_devices:
-            return df_devices[dev][-1]
+        return df_devices[0]
     else:
         # not implemented yet
-        return df_devices
+        return df_devices[0]
 
 def pick_from_ioreg():
     ioreg_devices = get_ioreg_devices() 

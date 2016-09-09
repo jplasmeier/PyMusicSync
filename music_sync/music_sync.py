@@ -1,13 +1,10 @@
 # -*- coding: utf-8 --
-from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 import usb, cannery, gdrive, music_sync_utils
-import codecs
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-# Global Variables
 # IOREG device info pickle file
 ioreg_file = "ioreg_file.p"
 
@@ -19,6 +16,7 @@ usb_collection = {}
 
 # If you have audio files under an artist (and not in an album folder)
 # Add the culprit artist to this list and let the user know 
+#TODO:fix this, it was a global and got wrecked
 audio_in_artist = []
 
 # Load cached JSON object of album size
@@ -33,18 +31,18 @@ def main():
     folder = 'Music'
     drive_collection = {}
     drive_size, drive_collection = gdrive.get_file_size_recursive(drive_collection, album_cache, drive, folder)
-    print("Your music takes up {0} Kib, {1} Gb of space.".format(drive_size/1024/1024,drive_size/1000/1000/1000)) 
+    print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(drive_size/1024/1024,drive_size/1000/1000/1000)) 
     
     #USB Stuff
     ioreg_device = cannery.load_ioreg(ioreg_file)
     if not ioreg_device:
         ioreg_device = usb.pick_from_ioreg()
     df_device = usb.pick_from_df()
-
+    
     print "You picked this device from IOREG: {}".format(ioreg_device)
     print "You picked this device from DF: {}".format(df_device)
-    usb_collection = music_sync_utils.clean_unicode(usb.get_usb_collection(df_device))
- 
+    usb_collection = music_sync_utils.clean_unicode(usb.get_usb_collection(df_device.mounted_on))
+    print "Free space on USB (kb)", df_device.get_free_space()
     drive_collection= music_sync_utils.clean_unicode(drive_collection)
     
     missing_from_usb = music_sync_utils.check_drive_not_in_usb_collection(drive_collection, usb_collection) 
