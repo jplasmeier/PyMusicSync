@@ -59,6 +59,7 @@ def get_usb_devices_ioreg():
     results = result.split("+-o")
     return results 
 
+# TODO: Refactor this shit show
 def get_ioreg_devices():
     devices = get_usb_devices_ioreg()
     ioreg_info = {}
@@ -104,6 +105,7 @@ def print_dict_list(dict_to_print):
     for key in dict_to_print:
             print dict_to_print[key], '\n'
 
+
 # Expose these functions to main
 def pick_from_df():
     df_devices = get_df_devices() 
@@ -112,6 +114,7 @@ def pick_from_df():
     else:
         # not implemented yet
         return df_devices[0]
+
 
 def pick_from_ioreg():
     ioreg_devices = get_ioreg_devices() 
@@ -122,6 +125,7 @@ def pick_from_ioreg():
     # prompt user selection
     choice = int(raw_input("Enter the number of the device which you would like to sync:"))
     return [ioreg_devices[dev] for dev in ioreg_devices if ioreg_devices[dev]["Device"] == choice]
+
 
 def get_usb_collection(device_path):
     """

@@ -1,7 +1,6 @@
 # Google Drive functionality 
 from datetime import datetime
 from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
 import cannery
 
 
@@ -32,6 +31,38 @@ def list_folder(drive, folder_id):
     """
     _q = {'q': "'{}' in parents and trashed=false".format(folder_id)}
     return drive.ListFile(_q).GetList()
+
+
+# TODO: Dead Code?
+def get_album_size_drive(drive, album_id):
+    """
+    album_id: string containing GoogleDriveFile id of an album_id folder
+    """
+    tracks = list_folder(drive, album_id)
+    size = 0
+    for track in tracks:
+        file_size = int(track["quotaBytesUsed"])
+        if file_size is not None:
+            size += file_size
+    cannery.add_album_to_cache(album_id, size, datetime.datetime.now())
+    return size
+
+
+# Collection Filling
+
+def fill_google_drive_collection(google_drive_collection, drive, folder):
+    """
+    :param google_drive_collection: GoogleDriveCollection object to fill with metadata from Google Drive
+    :param drive: the GoogleDrive object to pull metadata from Google Drive
+    :param folder: the name of the folder to pull metadata from. Currently must be in the root folder
+    """
+    # Check last mod by date for music folder and fill from cache if possible
+    artists = list_folder(drive, folder['id'])
+    for artist in artists:
+        # Check last mod by date for artist and fill from cache if possible
+        google_drive_collection.add_artist(artist)
+        fill_albums_for_artist(google_drive_collection, drive, artist)
+    return google_drive_collection
 
 
 def fill_albums_for_artist(google_drive_collection, drive, artist):
@@ -65,57 +96,7 @@ def fill_albums_for_artist(google_drive_collection, drive, artist):
 
     return size
 
-
-# TODO: Dead code
-def get_artist_size(drive_collection, album_cache, drive, artist):
-    """
-    :param artist: GoogleDriveFile of an artist folder
-    """
-    albums = list_folder(drive, artist['id'])
-    size = 0
-    album_list = drive_collection[artist['title']]
-    audio_in_artist = []
-    for album in albums:
-        file_extension_type = get_file_ext_type(album)
-        if album['title'] not in album_list and file_extension_type is 'folder':
-            album_list.append(album['title'])
-        if file_extension_type is 'audio' and artist['title'] not in audio_in_artist:
-            audio_in_artist.append(artist['title'])
-        album_size = get_album_size_cache(album_cache, album['id'])
-        if album_size is None:
-            album_size = get_album_size_drive(drive, album['id'])
-        if album_size is not None:
-            size += album_size
-    return size, drive_collection
-
-
-# TODO: Dead Code
-def get_album_size_cache(album_cache, album_id):
-    """
-    Turns out getting the size of each album_id thru drive takes forever
-    So we're caching them.
-    album_id: string containing GoogleDriveFile id of an album_id folder
-    Returns None if not found in cahce
-    """
-    if album_id in album_cache:
-        return album_cache[album_id]
-    else:
-        return None
-
-
-# TODO: Dead Code?
-def get_album_size_drive(drive, album_id):
-    """
-    album_id: string containing GoogleDriveFile id of an album_id folder
-    """
-    tracks = list_folder(drive, album_id)
-    size = 0
-    for track in tracks:
-        file_size = int(track["quotaBytesUsed"])
-        if file_size is not None:
-            size += file_size
-    cannery.add_album_to_cache(album_id, size, datetime.datetime.now())
-    return size
+# Drive Utilities
 
 
 def login():
@@ -141,21 +122,6 @@ def login():
     # TODO: Encryption???
     gauth.SaveCredentialsFile("mycreds.txt")
     return gauth
-
-
-def fill_google_drive_collection(google_drive_collection, drive, folder):
-    """
-    :param google_drive_collection: GoogleDriveCollection object to fill with metadata from Google Drive
-    :param drive: the GoogleDrive object to pull metadata from Google Drive
-    :param folder: the name of the folder to pull metadata from. Currently must be in the root folder
-    """
-    # Check last mod by date for music folder and fill from cache if possible
-    artists = list_folder(drive, folder['id'])
-    for artist in artists:
-        # Check last mod by date for artist and fill from cache if possible
-        google_drive_collection.add_artist(artist)
-        fill_albums_for_artist(google_drive_collection, drive, artist)
-    return google_drive_collection
 
 
 def get_file_from_root(drive, file_title):

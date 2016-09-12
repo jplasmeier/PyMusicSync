@@ -12,9 +12,12 @@ class MusicCollection:
     """
     def __init__(self):
         self.collection = {}
+        # Children will implement their own last_mod_by call in their init
+        # This is the last_mod_by datetime of the collection, not its cache
         self.last_mod_by = datetime.datetime.now()
         self.file_size = 0
-    
+
+    # TODO: What's the deal with Get/set methods in python?
     def get_file_size(self):
         return self.file_size
 
@@ -34,11 +37,19 @@ class MusicCollection:
             raise Exception("Artist not in Collection")
         return self.collection[artist]
 
+    def clean_unicode(self):
+        clean_collection = {}
+        for k in self.collection:
+            k_clean = codecs.utf_8_decode(k.encode('utf-8'))
+            clean_collection[k_clean] = []
+            for a in self.collection[k]:
+                clean_collection[k_clean].append(codecs.utf_8_decode(a.encode('utf-8')))
+        self.collection = clean_collection
+
 
 class GoogleDriveCollection(MusicCollection):
     """
     Google Drive specific collection. Includes metadata from the GoogleDrive object.
-    Creating an object involves parsing out the metadata we want from the Drive object.
     """
     def __init__(self, drive_file):
         """
@@ -49,24 +60,14 @@ class GoogleDriveCollection(MusicCollection):
         self.drive_file = drive_file
 
 
-    # def add_artist_and_albums(self, artist):
-        """
-        This probably shouldn't be a class method
-        :param artist:
-        :return:
-        """
-        cannery.get_artist_last_mod_by_date_drive(self, artist)
-
-        gdrive.add_artist(self, artist)
-
-#    def find_filesize_of_folder(self, folder):
-#        """
-#        Check cache
-#        Else get file size from Drive
-#        """
-#        gauth = gdrive.login()
-#        drive = GoogleDrive(gauth)
-#        self.filesize = gdrive.get_file_size_recursive(self, drive, folder)
+class USBCollection(MusicCollection):
+    """
+    USB Device specific collection. Includes file path of device.
+    """
+    def __init__(self, path):
+        super(USBCollection, self).__init__()
+        self.file_path = path
+        # Get last mod by from path ? system call??
 
     
 def check_drive_not_in_usb_collection(drive_collection, usb_collection):
@@ -101,16 +102,6 @@ def check_usb_not_in_drive_collection(drive_collection, usb_collection):
                         missing_from_drive_collection[artist] = []
                     missing_from_drive_collection[artist].append(album)
     return missing_from_drive_collection
-
-
-def clean_unicode(collection):
-    clean_dict = {}
-    for k in collection:
-        k_clean = codecs.utf_8_decode(k.encode('utf-8'))
-        clean_dict[k_clean] = []
-        for a in collection[k]:
-            clean_dict[k_clean].append(codecs.utf_8_decode(a.encode('utf-8')))
-    return clean_dict
 
 
 def print_collection(collection):
