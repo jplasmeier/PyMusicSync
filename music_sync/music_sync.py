@@ -20,11 +20,16 @@ album_cache = cannery.load_album_cache(drive_album_size_cache)
 ###############################################
 
 def main():
-    # Drive Stuff
+    # Drive Setup Stuff
     gauth = gdrive.login()
     drive = GoogleDrive(gauth)
-    folder = 'Music'
-    drive_collection = {}
+    folder_name = 'Music'
+
+    # Create GoogleDriveCollection object and fill it
+    google_drive_collection = music_sync_utils.GoogleDriveCollection(drive)
+    music_folder = gdrive.get_folder_from_root(drive, folder_name)
+    google_drive_collection = gdrive.fill_google_drive_collection(google_drive_collection, drive, music_folder)
+
     drive_size, drive_collection = gdrive.get_file_size_recursive(drive_collection, album_cache, drive, folder)
     print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(drive_size/1024/1024,drive_size/1000/1000/1000)) 
     

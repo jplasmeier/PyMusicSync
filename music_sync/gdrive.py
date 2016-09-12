@@ -1,5 +1,5 @@
 # Google Drive functionality 
-
+from datetime import datetime
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 import cannery
@@ -25,33 +25,34 @@ def get_file_ext_type(drive_file):
 
 def list_folder(drive, folder_id):
     """
-    :param drive:
-    :param folder_id:
+    Lists contents of a GoogleDriveFile that is a folder
+    :param drive: Drive object to use for getting folders
+    :param folder_id: The id of the GoogleDriveFile
     :return: The GoogleDriveList of folders
     """
     _q = {'q': "'{}' in parents and trashed=false".format(folder_id)}
     return drive.ListFile(_q).GetList()
 
 
-def get_artist_size(google_drive_collection, artist, album_cache=None):
+def fill_albums_for_artist(google_drive_collection, drive, artist):
     """
-    :param google_drive_collection: The GooglDriveCollection
-    :param artist: GoogleDriveFile of an artist.
-    :param album_cache: The cache of albums. Will be removed when caching is refactored
-    :return: None for now...
+    :param google_drive_collection: The GoogleDriveCollection
+    :param drive: The GoogleDrive object to use
+    :param artist: GoogleDriveFile of an artist
+    :return: Size of artist
     """
-    gauth = login()
-    drive = GoogleDrive(gauth)
-    albums = list_folder(drive, artist['id'])  
+    # Check last mod by date and fill from cache if possible
+    albums = list_folder(drive, artist['id'])
     album_list = google_drive_collection.get_albums_for_artist(artist['title'])
     audio_in_artist = []
+    size = 0
     for album in albums:
         file_extension_type = get_file_ext_type(album)
         if album['title'] not in album_list and file_extension_type is 'folder':
             google_drive_collection.add_album_for_artist(album[album['title']], artist['title'])
         if file_extension_type is 'audio' and artist['title'] not in audio_in_artist:
             audio_in_artist.append(artist['title'])
-        album_size = cannery.get_album_size_from_cache(album_cache,album['id'])
+        album_size = cannery.get_album_size_from_cache(album['id'])
         if album_size is None:
             album_size = get_album_size_drive(drive, album['id'])
         if album_size is not None:
@@ -62,7 +63,10 @@ def get_artist_size(google_drive_collection, artist, album_cache=None):
         print "You should put them in a folder by album instead."
         print sorted(audio_in_artist)
 
-    
+    return size
+
+
+# TODO: Dead code
 def get_artist_size(drive_collection, album_cache, drive, artist):
     """
     :param artist: GoogleDriveFile of an artist folder
@@ -70,6 +74,7 @@ def get_artist_size(drive_collection, album_cache, drive, artist):
     albums = list_folder(drive, artist['id'])
     size = 0
     album_list = drive_collection[artist['title']]
+    audio_in_artist = []
     for album in albums:
         file_extension_type = get_file_ext_type(album)
         if album['title'] not in album_list and file_extension_type is 'folder':
@@ -83,6 +88,8 @@ def get_artist_size(drive_collection, album_cache, drive, artist):
             size += album_size
     return size, drive_collection
 
+
+# TODO: Dead Code
 def get_album_size_cache(album_cache, album_id):
     """
     Turns out getting the size of each album_id thru drive takes forever
@@ -95,6 +102,8 @@ def get_album_size_cache(album_cache, album_id):
     else:
         return None
 
+
+# TODO: Dead Code?
 def get_album_size_drive(drive, album_id):
     """
     album_id: string containing GoogleDriveFile id of an album_id folder
@@ -105,8 +114,9 @@ def get_album_size_drive(drive, album_id):
         file_size = int(track["quotaBytesUsed"])
         if file_size is not None:
             size += file_size
-    album_cache[album_id] = size
+    cannery.add_album_to_cache(album_id, size, datetime.datetime.now())
     return size
+
 
 def login():
     """
@@ -128,8 +138,10 @@ def login():
         # Initialize the saved creds
         gauth.Authorize()
     # Save the current credentials to a file
+    # TODO: Encryption???
     gauth.SaveCredentialsFile("mycreds.txt")
     return gauth
+
 
 def fill_google_drive_collection(google_drive_collection, drive, folder):
     """
@@ -137,26 +149,38 @@ def fill_google_drive_collection(google_drive_collection, drive, folder):
     :param drive: the GoogleDrive object to pull metadata from Google Drive
     :param folder: the name of the folder to pull metadata from. Currently must be in the root folder
     """
-    file_list = drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
-    file_folder = (f for f in file_list if f['title'] is folder)
-    artists = list_folder(drive, file_folder['id'])
+    # Check last mod by date for music folder and fill from cache if possible
+    artists = list_folder(drive, folder['id'])
     for artist in artists:
-        google_drive_collection.add_artist_and_album(artist)
-        #google_drive_collection.find_filesize_of_folder(folder)
+        # Check last mod by date for artist and fill from cache if possible
+        google_drive_collection.add_artist(artist)
+        fill_albums_for_artist(google_drive_collection, drive, artist)
     return google_drive_collection
 
-def get_file_size_recursive(drive_collection, album_cache, drive, folder):
-    size = 0
+
+def get_file_from_root(drive, file_title):
+    """
+    Returns the file(s)/director(y/ies) as a GoogleDriveFile with the given title.
+    :param drive: GoogleDrive object to use to pull file from
+    :param file_title: Title to return file for
+    :return: List of GoogleDriveFiles matching file_title
+    """
+    file_list = drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
+    title_matches = []
+    for file1 in file_list:
+        if file1['title'] == file_title:
+            title_matches.append(file1)
+    return title_matches
+
+
+def get_folder_from_root(drive, file_title):
+    """
+    Returns the file/directory as a GoogleDriveFile with the given title.
+    :param drive: GoogleDrive object to use to pull file from
+    :param file_title: Title to return file for
+    :return: First GoogleDriveFile matching file_title found
+    """
     file_list = drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
     for file1 in file_list:
-        if file1['title'] == folder:
-            artists = list_folder(drive, file1['id'])
-            i = 0.0
-            for artist in artists:
-                drive_collection[artist['title']] = []
-                print "Getting Filesize: {0}%".format((i/len(artists))*100)
-                i += 1
-                size_add, drive_collection = get_artist_size(drive_collection, album_cache,  drive, artist)
-                size += size_add
-    return size, drive_collection
-
+        if file1['title'] == file_title:
+            return file1

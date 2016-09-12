@@ -2,6 +2,7 @@
 import pickle
 import os.path
 
+
 def load_album_cache(drive_album_size_cache):
     try:
         album_cache = {}
@@ -11,6 +12,7 @@ def load_album_cache(drive_album_size_cache):
         return album_cache
     except Exception, err:
         print "Cache error: {}".format(err)
+
 
 def pickle_album_cache(drive_album_size_cache, album_cache):
     """
@@ -24,9 +26,11 @@ def pickle_album_cache(drive_album_size_cache, album_cache):
         print "Error Pickling Albums: {}".format(err)
     return True
 
+
 def pickle_ioreg(ioreg_device, ioreg_file):
     with open(ioreg_file, "wb") as fp:
         pickle.dump(ioreg_device, fp)
+
 
 def load_ioreg(ioreg_file):
     if os.path.isfile(ioreg_file):
@@ -35,3 +39,11 @@ def load_ioreg(ioreg_file):
         return ioreg_device
     else:
         return None
+
+
+def get_album_size_from_cache(album_id):
+    raise NotImplementedError
+
+
+def add_album_to_cache(album_id, size, current_time):
+    raise NotImplementedError

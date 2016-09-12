@@ -2,7 +2,8 @@
 import gdrive
 import codecs
 import datetime
-from pydrive.drive import GoogleDrive
+import cannery
+from PyDrive.drive import GoogleDrive
 
 
 class MusicCollection:
@@ -12,17 +13,10 @@ class MusicCollection:
     def __init__(self):
         self.collection = {}
         self.last_mod_by = datetime.datetime.now()
-        self.file_size = -1
+        self.file_size = 0
     
     def get_file_size(self):
-        if self.file_size < 0:
-            raise Exception("File size not yet found.")
         return self.file_size
-
-    def find_file_size(self):
-        """Method stub. Implement in children
-        """
-        raise NotImplementedError
 
     def add_artist(self, artist):
         if artist in self.collection:
@@ -47,17 +41,23 @@ class GoogleDriveCollection(MusicCollection):
     Creating an object involves parsing out the metadata we want from the Drive object.
     """
     def __init__(self, drive_file):
+        """
+        :param drive_file: The root folder you are looking for music in.
+        """
         super(GoogleDriveCollection, self).__init__()
         self.last_mod_by = drive_file.metadata['modifiedDate']
         self.drive_file = drive_file
-    
-    def add_artist_and_albums(self, artist):
-        # Check last mod by date
+
+
+    # def add_artist_and_albums(self, artist):
+        """
+        This probably shouldn't be a class method
+        :param artist:
+        :return:
+        """
+        cannery.get_artist_last_mod_by_date_drive(self, artist)
+
         gdrive.add_artist(self, artist)
-
-    def find_file_size(self):
-        pass
-
 
 #    def find_filesize_of_folder(self, folder):
 #        """
