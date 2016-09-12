@@ -1,11 +1,79 @@
 # Utilities for MusicSync
+import gdrive
 import codecs
+import datetime
+from pydrive.drive import GoogleDrive
 
+
+class MusicCollection:
+    """
+    Class to store music collections in a way that is useful to this program.
+    """
+    def __init__(self):
+        self.collection = {}
+        self.last_mod_by = datetime.datetime.now()
+        self.file_size = -1
+    
+    def get_file_size(self):
+        if self.file_size < 0:
+            raise Exception("File size not yet found.")
+        return self.file_size
+
+    def find_file_size(self):
+        """Method stub. Implement in children
+        """
+        raise NotImplementedError
+
+    def add_artist(self, artist):
+        if artist in self.collection:
+            return
+        self.collection[artist] = []
+        return artist
+
+    def add_album_for_artist(self, album, artist):
+        if artist not in self.collection:
+            self.collection[artist] = []
+        self.collection[artist].append(album)
+
+    def get_albums_for_artist(self, artist):
+        if artist not in self.collection:
+            raise Exception("Artist not in Collection")
+        return self.collection[artist]
+
+
+class GoogleDriveCollection(MusicCollection):
+    """
+    Google Drive specific collection. Includes metadata from the GoogleDrive object.
+    Creating an object involves parsing out the metadata we want from the Drive object.
+    """
+    def __init__(self, drive_file):
+        super(GoogleDriveCollection, self).__init__()
+        self.last_mod_by = drive_file.metadata['modifiedDate']
+        self.drive_file = drive_file
+    
+    def add_artist_and_albums(self, artist):
+        # Check last mod by date
+        gdrive.add_artist(self, artist)
+
+    def find_file_size(self):
+        pass
+
+
+#    def find_filesize_of_folder(self, folder):
+#        """
+#        Check cache
+#        Else get file size from Drive
+#        """
+#        gauth = gdrive.login()
+#        drive = GoogleDrive(gauth)
+#        self.filesize = gdrive.get_file_size_recursive(self, drive, folder)
+
+    
 def check_drive_not_in_usb_collection(drive_collection, usb_collection):
     missing_from_usb_collection = {}
     for artist in drive_collection:
         if artist not in usb_collection:
-            #TODO: investigate performance of caching lookup (save the list locally instead of looking up artist again)
+            # TODO: investigate performance of caching lookup (save the list locally instead of looking up artist again)
             missing_from_usb_collection[artist] = []
             for album in drive_collection[artist]:
                 missing_from_usb_collection[artist].append(album)
@@ -17,12 +85,13 @@ def check_drive_not_in_usb_collection(drive_collection, usb_collection):
                     missing_from_usb_collection[artist].append(album)
     return missing_from_usb_collection
 
+
 def check_usb_not_in_drive_collection(drive_collection, usb_collection):
     missing_from_drive_collection = {}
     for artist in usb_collection:
         if artist not in drive_collection:
             missing_from_drive_collection[artist] = []
-            #TODO: investigate performance of caching lookup (save the list locally instead of looking up artist again)
+            # TODO: investigate performance of caching lookup (save the list locally instead of looking up artist again)
             for album in usb_collection[artist]:
                 missing_from_drive_collection[artist].append(album)
         else:
@@ -33,6 +102,7 @@ def check_usb_not_in_drive_collection(drive_collection, usb_collection):
                     missing_from_drive_collection[artist].append(album)
     return missing_from_drive_collection
 
+
 def clean_unicode(collection):
     clean_dict = {}
     for k in collection:
@@ -42,14 +112,18 @@ def clean_unicode(collection):
             clean_dict[k_clean].append(codecs.utf_8_decode(a.encode('utf-8')))
     return clean_dict
 
+
 def print_collection(collection):
     for artist in collection:
         print "Artist: {}".format(artist)
         for album in collection[artist]:
             print "---Album: {}".format(album)
 
+
 def find_possible_duplicate_albums(missing_from_usb, missing_from_drive):
     """
+    :param missing_from_drive The MusicColleciton of music on USB but not Drive
+    :param missing_from_usb The MusicCollection of music on Drive but not USB
     Sometimes, usually due to unicode fuckery, albums will be compared as inequal even though they are.
     This function looks for strings that differ due to unicode characters
     Or are substrings of each other.
@@ -69,8 +143,11 @@ def find_possible_duplicate_albums(missing_from_usb, missing_from_drive):
 
     return missing_from_usb, missing_from_drive
 
+
 def check_duplicate_string(s1, s2):
     """
+    :param s1 First string
+    :param s2 Second string
     Check for the approximate equality of strings
     Do this by comparing character freuqency
     """
@@ -93,8 +170,11 @@ def check_duplicate_string(s1, s2):
     else:
         return False
 
+
 def fix_possible_duplicate_albums(missing_from_usb, missing_from_drive):
     """
+    :param missing_from_drive The MusicColleciton of music on USB but not Drive
+    :param missing_from_usb The MusicCollection of music on Drive but not USB
     Update files to match
     """
-    pass
+    raise NotImplementedError

@@ -14,11 +14,6 @@ ioreg_file = "ioreg_file.p"
 drive_collection = {}
 usb_collection = {}
 
-# If you have audio files under an artist (and not in an album folder)
-# Add the culprit artist to this list and let the user know 
-#TODO:fix this, it was a global and got wrecked
-audio_in_artist = []
-
 # Load cached JSON object of album size
 drive_album_size_cache = "album_cache.p"
 album_cache = cannery.load_album_cache(drive_album_size_cache)
@@ -55,11 +50,6 @@ def main():
     print "The following are missing from your Drive"
     music_sync_utils.print_collection(missing_from_drive)
 
-    # Epilogue
-    if audio_in_artist:
-        print "Heads up, you have audio files directly in the following artists."
-        print "You should put them in a folder by album instead."
-        print sorted(audio_in_artist)
 
     # We can pickle the IOREG stuff because its serial no. is invariant, but we can't be sure that its mount point in df will be the same.
     # Need to research if there's a (reliable) link between df and IOREG
