@@ -17,8 +17,6 @@ ioreg_file = "ioreg_file.p"
 drive_album_size_cache = "album_cache.p"
 album_cache = cannery.load_album_cache(drive_album_size_cache)
 
-# 09/12/2016 8:45 - 9:10
-
 
 def main():
     # Drive Setup Stuff
@@ -27,7 +25,7 @@ def main():
     folder_name = 'Music'
 
     # Create, fill, and clean GoogleDriveCollection
-    google_drive_collection = music_sync_utils.GoogleDriveCollection(drive)
+    google_drive_collection = music_sync_utils.GoogleDriveCollection()
     music_folder = gdrive.get_folder_from_root(drive, folder_name)
     google_drive_collection = gdrive.fill_google_drive_collection(google_drive_collection, drive, music_folder)
     google_drive_collection.clean_unicode()
@@ -49,9 +47,7 @@ def main():
     usb_collection.collection = usb.get_usb_collection(usb_collection.file_path)
     usb_collection.clean_unicode()
 
-    # TODO: Which is better?
     print "Free space on USB (kb)", df_device.avail
-    print "Free space on USB (kb)", df_device.get_free_space()
 
     # TODO: Refactor to use class functions - or something
     missing_from_usb = music_sync_utils.check_drive_not_in_usb_collection(google_drive_collection, usb_collection)
@@ -64,7 +60,8 @@ def main():
     print "The following are missing from your Drive"
     music_sync_utils.print_collection(missing_from_drive)
 
-    # We can pickle the IOREG stuff because its serial no. is invariant, but we can't be sure that its mount point in df will be the same.
+    # We can pickle the IOREG stuff because its serial no. is invariant,
+    # But we can't be sure that its mount point in df will be the same.
     # Need to research if there's a (reliable) link between df and IOREG
     cannery.pickle_ioreg(ioreg_device, ioreg_file)
     cannery.pickle_album_cache(drive_album_size_cache, album_cache)

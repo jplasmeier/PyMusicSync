@@ -46,4 +46,5 @@ def get_album_size_from_cache(album_id):
 
 
 def add_album_to_cache(album_id, size, current_time):
-    raise NotImplementedError
+    pass
+    # raise NotImplementedError

@@ -1,7 +1,7 @@
 # Google Drive functionality 
-from datetime import datetime
 from pydrive.auth import GoogleAuth
 import cannery
+import datetime
 
 
 def get_file_ext_type(drive_file):
@@ -60,7 +60,7 @@ def fill_google_drive_collection(google_drive_collection, drive, folder):
     artists = list_folder(drive, folder['id'])
     for artist in artists:
         # Check last mod by date for artist and fill from cache if possible
-        google_drive_collection.add_artist(artist)
+        google_drive_collection.add_artist(artist['title'])
         fill_albums_for_artist(google_drive_collection, drive, artist)
     return google_drive_collection
 
@@ -80,14 +80,15 @@ def fill_albums_for_artist(google_drive_collection, drive, artist):
     for album in albums:
         file_extension_type = get_file_ext_type(album)
         if album['title'] not in album_list and file_extension_type is 'folder':
-            google_drive_collection.add_album_for_artist(album[album['title']], artist['title'])
+            google_drive_collection.add_album_for_artist(album['title'], artist['title'])
         if file_extension_type is 'audio' and artist['title'] not in audio_in_artist:
             audio_in_artist.append(artist['title'])
-        album_size = cannery.get_album_size_from_cache(album['id'])
-        if album_size is None:
-            album_size = get_album_size_drive(drive, album['id'])
-        if album_size is not None:
-            size += album_size
+        google_drive_collection.set_album_size(album['title'], artist['title'], get_album_size_drive(drive, album['id']))
+        # album_size = cannery.get_album_size_from_cache(album['id'])
+        # if not album_size:
+        #     album_size = get_album_size_drive(drive, album['id'])
+        # if album_size:
+        #    size += album_size
 
     if audio_in_artist:
         print "Heads up, you have audio files directly in the following artists."
