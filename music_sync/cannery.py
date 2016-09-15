@@ -2,6 +2,8 @@
 import pickle
 import os.path
 
+collection_cache_path = "collection_cache.p"
+
 
 def load_album_cache(drive_album_size_cache):
     try:
@@ -12,6 +14,45 @@ def load_album_cache(drive_album_size_cache):
         return album_cache
     except Exception, err:
         print "Cache error: {}".format(err)
+
+
+def pickle_collection_cache(collection):
+    """
+    drive_album_size_cache: file to pickle album_cache to
+    album_cache: the object to be pickled
+    """
+    try:
+        with open(collection_cache_path, "wb") as fp:
+            pickle.dump(collection, fp)
+    except Exception, err:
+        print "Error Pickling Collection: {}".format(err)
+    return True
+
+
+def load_collection_cache():
+    try:
+        album_cache = {}
+        if os.path.isfile(collection_cache_path):
+            with open(collection_cache_path, "rb") as fp:
+                album_cache = pickle.load(fp)
+        return album_cache
+    except Exception, err:
+        print "Cache error: {}".format(err)
+
+
+def get_cached_drive_colleciton(folder):
+    """
+    Returns a cached version of the Drive collection
+    :param folder: The folder that contains the contents of the Collection
+    :return: The collection if there's a cached version, otherwise return None
+    """
+    print folder.metadata
+    incoming_etag = folder.metadata['etag']
+    collection_cache = load_collection_cache()
+    if incoming_etag in collection_cache:
+        return collection_cache[incoming_etag]
+    else:
+        return
 
 
 def pickle_album_cache(drive_album_size_cache, album_cache):

@@ -54,10 +54,12 @@ class USB_Device:
     def get_free_space(self):
         return self.DF_info['Avail']
 
+
 def get_usb_devices_ioreg():
     result = check_output(["ioreg", "-p", "IOUSB", "-l", "-w", "0"])
     results = result.split("+-o")
     return results 
+
 
 # TODO: Refactor this shit show
 def get_ioreg_devices():

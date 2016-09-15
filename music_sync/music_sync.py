@@ -27,10 +27,11 @@ def main():
     # Create, fill, and clean GoogleDriveCollection
     google_drive_collection = music_sync_utils.GoogleDriveCollection()
     music_folder = gdrive.get_folder_from_root(drive, folder_name)
+    google_drive_collection.etag = music_folder.metadata['etag']
     google_drive_collection = gdrive.fill_google_drive_collection(google_drive_collection, drive, music_folder)
     google_drive_collection.clean_unicode()
 
-    print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_collection.get_file_size()/1024/1024, google_drive_collection.get_file_size()/1000/1000/1000))
+    print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_collection.get_collection_size()/1024/1024, google_drive_collection.get_collection_size()/1000/1000/1000))
     
     # USB Setup Stuff
     ioreg_device = cannery.load_ioreg(ioreg_file)
@@ -65,6 +66,7 @@ def main():
     # Need to research if there's a (reliable) link between df and IOREG
     cannery.pickle_ioreg(ioreg_device, ioreg_file)
     cannery.pickle_album_cache(drive_album_size_cache, album_cache)
+    cannery.pickle_collection_cache(google_drive_collection)
 
 if __name__ == '__main__':
     main() 

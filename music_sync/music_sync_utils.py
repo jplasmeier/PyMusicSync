@@ -28,6 +28,9 @@ class MusicCollection(object):
         self.last_mod_by = datetime.datetime.now()
         self.file_size = 0
 
+    def get_collection_size(self):
+        return sum(self.get_artist_size(a) for a in self.collection)
+
     def add_artist(self, artist):
         """
         Adds a new artist to the collection in the form of a CollectionItem object.
@@ -35,46 +38,67 @@ class MusicCollection(object):
         :param artist: Artist name in the form of a string
         :return: self per the standard practice here
         """
-        collection_artist = CollectionItem(artist)
-        if collection_artist in self.collection:
-            return
-        self.collection[collection_artist] = []
+        collection_artist = self.get_collection_item(artist)
+        if collection_artist is None:
+            collection_artist = CollectionItem(artist)
+            self.collection[collection_artist] = []
+        self.collection[collection_artist].append(collection_artist)
         print "Artist {} added".format(collection_artist.name)
         return self
 
+    def get_collection_item(self, item_name):
+        collection_item = None
+        items = [a for a in self.collection if a.name == item_name]
+        if items:
+            collection_item = items[0] or None
+        else:
+            for artist in self.collection:
+                print self.collection[artist]
+                items = [a for a in self.collection[artist] if a.name == item_name]
+                if items:
+                    collection_item = items[0]
+        return collection_item
+
     def add_album_for_artist(self, album, artist):
-        collection_artist = CollectionItem(artist)
-        if collection_artist not in self.collection:
-            self.collection[collection_artist] = []
-        collection_album = CollectionItem(album)
-        self.collection[collection_artist].append(collection_album)
+        print "--Album {} added".format(album)
+        collection_artist = self.get_collection_item(artist)
+        if not collection_artist:
+            self.add_artist(artist)
+        collection_album = self.get_collection_item(album)
+        if not collection_album:
+            collection_album = CollectionItem(album)
+            self.collection[collection_artist].append(collection_album)
         return self
 
     def get_albums_for_artist(self, artist):
         collection_artist = CollectionItem(artist)
-        print "collection", [a.name for a in self.collection]
         if collection_artist.name not in [a.name for a in self.collection]:
             raise Exception("Artist {} not in Collection".format(collection_artist.name))
         return self.collection[collection_artist]
 
     def set_album_size(self, album, artist, size):
-        collection_artist = CollectionItem(artist)
-        a_c, = (a.name for a in self.collection if a.name == artist)
-        if collection_artist.name not in [a.name for a in self.collection]:
+        collection_artist = self.get_collection_item(artist)
+        if not collection_artist:
             raise Exception("Artist {} not in Collection".format(artist))
-        if album not in self.collection[a_c]:
+        collection_album, = [a for a in self.collection[collection_artist] if a.name == album]
+        if not collection_album:
             raise Exception("Album {} not in artist".format(album))
-        a_a, = (album for ab in self.collection[a_c] if ab.name == album)
-        # a_a.file_size = size
-        return a_a
+        collection_album.file_size = size
+        return size
+
+    def get_artist_size(self, collection_artist):
+        size = 0
+        for album in self.collection[collection_artist]:
+            size += album.file_size
+        return size
 
     def clean_unicode(self):
         for artist in self.collection:
-            clean_name = codecs.utf_8_decode(artist.name.encode('utf-8'))
-            artist.name = clean_name
             for album in self.collection[artist]:
                 clean_album_name = codecs.utf_8_decode(artist.name.encode('utf-8'))
                 album.name = clean_album_name
+            clean_name = codecs.utf_8_decode(artist.name.encode('utf-8'))
+            artist.name = clean_name
         return self
 
 
@@ -84,6 +108,7 @@ class GoogleDriveCollection(MusicCollection):
     """
     def __init__(self):
         super(GoogleDriveCollection, self).__init__()
+        self.etag = None
 
 
 class USBCollection(MusicCollection):
@@ -98,14 +123,10 @@ class USBCollection(MusicCollection):
 
 class CollectionItem(NameEqualityMixin):
 
-    def __init__(self, name, file_size=None, size_of_albums=None, last_mod_by_date=None):
+    def __init__(self, name, file_size=None, last_mod_by_date=None):
         self.name = name
         if file_size:
             self.file_size = file_size
-        if size_of_albums:
-            self.size_of_albums = size_of_albums
-        else:
-            self.size_of_albums = 0
         if last_mod_by_date:
             self.last_mod_by_date = last_mod_by_date
         else:

@@ -57,6 +57,7 @@ def fill_google_drive_collection(google_drive_collection, drive, folder):
     :param folder: the name of the folder to pull metadata from. Currently must be in the root folder
     """
     # Check last mod by date for music folder and fill from cache if possible
+    cache_collection = cannery.get_cached_drive_colleciton(folder)
     artists = list_folder(drive, folder['id'])
     for artist in artists:
         # Check last mod by date for artist and fill from cache if possible
@@ -81,9 +82,10 @@ def fill_albums_for_artist(google_drive_collection, drive, artist):
         file_extension_type = get_file_ext_type(album)
         if album['title'] not in album_list and file_extension_type is 'folder':
             google_drive_collection.add_album_for_artist(album['title'], artist['title'])
+            google_drive_collection.set_album_size(album['title'], artist['title'],
+                                                   get_album_size_drive(drive, album['id']))
         if file_extension_type is 'audio' and artist['title'] not in audio_in_artist:
             audio_in_artist.append(artist['title'])
-        google_drive_collection.set_album_size(album['title'], artist['title'], get_album_size_drive(drive, album['id']))
         # album_size = cannery.get_album_size_from_cache(album['id'])
         # if not album_size:
         #     album_size = get_album_size_drive(drive, album['id'])
@@ -94,8 +96,6 @@ def fill_albums_for_artist(google_drive_collection, drive, artist):
         print "Heads up, you have audio files directly in the following artists."
         print "You should put them in a folder by album instead."
         print sorted(audio_in_artist)
-
-    return size
 
 # Drive Utilities
 
