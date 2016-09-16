@@ -28,11 +28,13 @@ def main():
     google_drive_collection = music_sync_utils.GoogleDriveCollection()
     music_folder = gdrive.get_folder_from_root(drive, folder_name)
     google_drive_collection.etag = music_folder.metadata['etag']
-    google_drive_collection = gdrive.fill_google_drive_collection(google_drive_collection, drive, music_folder)
-    google_drive_collection.clean_unicode()
+    gdrive.fill_google_drive_collection(google_drive_collection, drive, music_folder)
+    print google_drive_collection.collection
+    google_drive_collection.collection = music_sync_utils.clean_unicode(google_drive_collection.collection)
 
     print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_collection.get_collection_size()/1024/1024, google_drive_collection.get_collection_size()/1000/1000/1000))
-    
+    cannery.pickle_collection_cache(google_drive_collection)
+
     # USB Setup Stuff
     ioreg_device = cannery.load_ioreg(ioreg_file)
     if not ioreg_device:
@@ -46,7 +48,7 @@ def main():
     # Create, fill, and clean USBCollection
     usb_collection = music_sync_utils.USBCollection(df_device.mounted_on)
     usb_collection.collection = usb.get_usb_collection(usb_collection.file_path)
-    usb_collection.clean_unicode()
+    usb_collection = music_sync_utils.clean_unicode(usb_collection)
 
     print "Free space on USB (kb)", df_device.avail
 

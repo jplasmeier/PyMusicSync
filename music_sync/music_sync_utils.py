@@ -29,77 +29,21 @@ class MusicCollection(object):
         self.file_size = 0
 
     def get_collection_size(self):
-        return sum(self.get_artist_size(a) for a in self.collection)
-
-    def add_artist(self, artist):
-        """
-        Adds a new artist to the collection in the form of a CollectionItem object.
-        This should work when adding from Drive or the Cache.
-        :param artist: Artist name in the form of a string
-        :return: self per the standard practice here
-        """
-        collection_artist = self.get_collection_item(artist)
-        if collection_artist is None:
-            collection_artist = CollectionItem(artist)
-            self.collection[collection_artist] = []
-        self.collection[collection_artist].append(collection_artist)
-        print "Artist {} added".format(collection_artist.name)
-        return self
-
-    def get_collection_item(self, item_name):
-        collection_item = None
-        items = [a for a in self.collection if a.name == item_name]
-        if items:
-            collection_item = items[0] or None
-        else:
-            for artist in self.collection:
-                print self.collection[artist]
-                items = [a for a in self.collection[artist] if a.name == item_name]
-                if items:
-                    collection_item = items[0]
-        return collection_item
-
-    def add_album_for_artist(self, album, artist):
-        print "--Album {} added".format(album)
-        collection_artist = self.get_collection_item(artist)
-        if not collection_artist:
-            self.add_artist(artist)
-        collection_album = self.get_collection_item(album)
-        if not collection_album:
-            collection_album = CollectionItem(album)
-            self.collection[collection_artist].append(collection_album)
-        return self
-
-    def get_albums_for_artist(self, artist):
-        collection_artist = CollectionItem(artist)
-        if collection_artist.name not in [a.name for a in self.collection]:
-            raise Exception("Artist {} not in Collection".format(collection_artist.name))
-        return self.collection[collection_artist]
-
-    def set_album_size(self, album, artist, size):
-        collection_artist = self.get_collection_item(artist)
-        if not collection_artist:
-            raise Exception("Artist {} not in Collection".format(artist))
-        collection_album, = [a for a in self.collection[collection_artist] if a.name == album]
-        if not collection_album:
-            raise Exception("Album {} not in artist".format(album))
-        collection_album.file_size = size
-        return size
-
-    def get_artist_size(self, collection_artist):
         size = 0
-        for album in self.collection[collection_artist]:
-            size += album.file_size
+        for artist in self.collection:
+            size += self.collection[artist].get_file_size_of_albums()
         return size
 
-    def clean_unicode(self):
-        for artist in self.collection:
-            for album in self.collection[artist]:
-                clean_album_name = codecs.utf_8_decode(artist.name.encode('utf-8'))
-                album.name = clean_album_name
-            clean_name = codecs.utf_8_decode(artist.name.encode('utf-8'))
-            artist.name = clean_name
-        return self
+
+def clean_unicode(collection):
+    clean_collection = {}
+    for artist_name in collection:
+        clean_artist_name = codecs.utf_8_decode(artist_name.encode('utf-8'))
+        clean_collection[clean_artist_name] = ArtistItem(collection[artist_name].name)
+        for album in collection[artist_name].albums:
+            clean_album_name = codecs.utf_8_decode(album.name.encode('utf-8'))
+            clean_collection[clean_artist_name].albums.append(AlbumItem(clean_album_name, album.file_size))
+    return clean_collection
 
 
 class GoogleDriveCollection(MusicCollection):
@@ -125,12 +69,29 @@ class CollectionItem(NameEqualityMixin):
 
     def __init__(self, name, file_size=None, last_mod_by_date=None):
         self.name = name
-        if file_size:
-            self.file_size = file_size
         if last_mod_by_date:
             self.last_mod_by_date = last_mod_by_date
         else:
             self.last_mod_by_date = datetime.datetime.now()
+
+
+class ArtistItem(CollectionItem):
+
+    def __init__(self, name):
+        super(ArtistItem, self).__init__(name)
+        self.albums = []
+
+    def get_file_size_of_albums(self):
+        size = 0
+        for album in self.albums:
+            size += album.file_size
+        return size
+
+class AlbumItem(CollectionItem):
+
+    def __init__(self, name, file_size):
+        super(AlbumItem, self).__init__(name, self)
+        self.file_size = file_size
 
 
 def check_drive_not_in_usb_collection(drive_collection, usb_collection):

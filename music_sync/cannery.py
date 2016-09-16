@@ -31,7 +31,7 @@ def pickle_collection_cache(collection):
 
 def load_collection_cache():
     try:
-        album_cache = {}
+        album_cache = None
         if os.path.isfile(collection_cache_path):
             with open(collection_cache_path, "rb") as fp:
                 album_cache = pickle.load(fp)
@@ -40,7 +40,8 @@ def load_collection_cache():
         print "Cache error: {}".format(err)
 
 
-def get_cached_drive_colleciton(folder):
+# TODO: Test
+def get_cached_drive_collection(folder):
     """
     Returns a cached version of the Drive collection
     :param folder: The folder that contains the contents of the Collection
@@ -49,8 +50,12 @@ def get_cached_drive_colleciton(folder):
     print folder.metadata
     incoming_etag = folder.metadata['etag']
     collection_cache = load_collection_cache()
-    if incoming_etag in collection_cache:
-        return collection_cache[incoming_etag]
+    if not collection_cache or not collection_cache.etag:
+        return
+    if incoming_etag == collection_cache.etag:
+        print collection_cache.etag
+        print "collection cache", [k for k in collection_cache.collection]
+        return collection_cache
     else:
         return
 
