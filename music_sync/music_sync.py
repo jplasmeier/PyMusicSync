@@ -13,27 +13,30 @@ sys.setdefaultencoding('utf8')
 ioreg_file = "ioreg_file.p"
 
 
-# Load cached JSON object of album size
-drive_album_size_cache = "album_cache.p"
-album_cache = cannery.load_album_cache(drive_album_size_cache)
-
-
 def main():
-    # Drive Setup Stuff
+    # Drive Setup
     gauth = gdrive.login()
     drive = GoogleDrive(gauth)
     folder_name = 'Music'
+    music_folder = gdrive.get_folder_from_root(drive, folder_name)
 
     # Create, fill, and clean GoogleDriveCollection
-    google_drive_collection = music_sync_utils.GoogleDriveCollection()
-    music_folder = gdrive.get_folder_from_root(drive, folder_name)
-    google_drive_collection.etag = music_folder.metadata['etag']
-    gdrive.fill_google_drive_collection(google_drive_collection, drive, music_folder)
-    print google_drive_collection.collection
-    google_drive_collection.collection = music_sync_utils.clean_unicode(google_drive_collection.collection)
+    google_drive_library = music_sync_utils.GoogleDriveLibrary()
+    google_drive_library.etag = music_folder.metadata['etag']
 
-    print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_collection.get_collection_size()/1024/1024, google_drive_collection.get_collection_size()/1000/1000/1000))
-    cannery.pickle_collection_cache(google_drive_collection)
+    # Check the cache first
+    library_cache = cannery.get_cached_drive_library(music_folder)
+    if library_cache:
+        google_drive_library = library_cache
+    else:
+        google_drive_library.collection = gdrive.fill_google_drive_collection(google_drive_library, drive, music_folder)
+
+    # TODO: Remove printing
+    music_sync_utils.print_collection(google_drive_library.collection)
+    google_drive_library.collection = music_sync_utils.clean_unicode(google_drive_library.collection)
+
+    print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_library.get_collection_size()/1024/1024, google_drive_library.get_collection_size()/1000/1000/1000))
+    cannery.pickle_drive_library(google_drive_library)
 
     # USB Setup Stuff
     ioreg_device = cannery.load_ioreg(ioreg_file)
@@ -46,17 +49,18 @@ def main():
     print "You picked this device from DF: {}".format(df_device)
 
     # Create, fill, and clean USBCollection
-    usb_collection = music_sync_utils.USBCollection(df_device.mounted_on)
-    usb_collection.collection = usb.get_usb_collection(usb_collection.file_path)
-    usb_collection = music_sync_utils.clean_unicode(usb_collection)
+    usb_music = music_sync_utils.USBLibrary(df_device.mounted_on)
+    usb_music.collection = usb.get_usb_collection(usb_music.file_path)
+    usb_music.collection = music_sync_utils.clean_unicode(usb_music.collection)
 
+    # watch out that size is hard coded against the df call - can return different things
     print "Free space on USB (kb)", df_device.avail
 
     # TODO: Refactor to use class functions - or something
-    missing_from_usb = music_sync_utils.check_drive_not_in_usb_collection(google_drive_collection, usb_collection)
-    missing_from_drive = music_sync_utils.check_usb_not_in_drive_collection(google_drive_collection, usb_collection)
+    missing_from_usb = music_sync_utils.subtract_collection_elements(google_drive_library.collection, usb_music.collection)
+    missing_from_drive = music_sync_utils.subtract_collection_elements(google_drive_library.collection, usb_music.collection)
     
-    missing_from_usb, missing_from_drive = music_sync_utils.find_possible_duplicate_albums(missing_from_usb, missing_from_drive)
+    missing_from_usb, missing_from_drive = music_sync_utils.find_duplicate_albums(missing_from_usb, missing_from_drive)
 
     print "The following are missing from your USB device"
     music_sync_utils.print_collection(missing_from_usb)
@@ -67,8 +71,6 @@ def main():
     # But we can't be sure that its mount point in df will be the same.
     # Need to research if there's a (reliable) link between df and IOREG
     cannery.pickle_ioreg(ioreg_device, ioreg_file)
-    cannery.pickle_album_cache(drive_album_size_cache, album_cache)
-    cannery.pickle_collection_cache(google_drive_collection)
 
 if __name__ == '__main__':
     main() 

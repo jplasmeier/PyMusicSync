@@ -3,6 +3,7 @@ import codecs
 import datetime
 
 
+# TODO: Mixin vs Class? Semantics???
 class NameEqualityMixin(object):
 
     def __eq__(self, other):
@@ -17,7 +18,7 @@ class NameEqualityMixin(object):
         return hash(self.name)
 
 
-class MusicCollection(object):
+class MusicLibrary(object):
     """
     Class to store music collections in a way that is useful to this program.
     """
@@ -26,7 +27,6 @@ class MusicCollection(object):
         # Children will implement their own last_mod_by call in their init
         # This is the last_mod_by datetime of the collection, not its cache
         self.last_mod_by = datetime.datetime.now()
-        self.file_size = 0
 
     def get_collection_size(self):
         size = 0
@@ -46,39 +46,37 @@ def clean_unicode(collection):
     return clean_collection
 
 
-class GoogleDriveCollection(MusicCollection):
+class GoogleDriveLibrary(MusicLibrary):
     """
     Google Drive specific collection. Includes metadata from the GoogleDrive object.
     """
     def __init__(self):
-        super(GoogleDriveCollection, self).__init__()
+        super(GoogleDriveLibrary, self).__init__()
         self.etag = None
 
 
-class USBCollection(MusicCollection):
+class USBLibrary(MusicLibrary):
     """
     USB Device specific collection. Includes file path of device.
     """
     def __init__(self, path):
-        super(USBCollection, self).__init__()
+        super(USBLibrary, self).__init__()
         self.file_path = path
         # Get last mod by from path ? system call??
 
 
 class CollectionItem(NameEqualityMixin):
 
-    def __init__(self, name, file_size=None, last_mod_by_date=None):
+    def __init__(self, name, etag=None):
         self.name = name
-        if last_mod_by_date:
-            self.last_mod_by_date = last_mod_by_date
-        else:
-            self.last_mod_by_date = datetime.datetime.now()
+        self.etag = etag
 
 
 class ArtistItem(CollectionItem):
 
-    def __init__(self, name):
+    def __init__(self, name, etag):
         super(ArtistItem, self).__init__(name)
+        self.etag = etag
         self.albums = []
 
     def get_file_size_of_albums(self):
@@ -87,11 +85,32 @@ class ArtistItem(CollectionItem):
             size += album.file_size
         return size
 
+
 class AlbumItem(CollectionItem):
 
     def __init__(self, name, file_size):
         super(AlbumItem, self).__init__(name, self)
         self.file_size = file_size
+
+
+# (A - B)
+def subtract_collection_elements(collection_a, collection_b):
+    """
+    Subtract B from A by set subtraction on collection objects
+    :param collection_a:
+    :param collection_b:
+    :return: Dict of elements a of A such that a not in B.
+    """
+    result_dict = {}
+    for artist_name in collection_a:
+        # Add artist to result set
+        if artist_name not in collection_b:
+            result_dict[artist_name] = collection_a[artist_name]
+        else:
+            for album in dictA[artist].albums:
+                if album not in dictB[artist].albums:
+                    result_dict[artist] = dictA[artist]
+    return result_dict
 
 
 def check_drive_not_in_usb_collection(drive_collection, usb_collection):
@@ -135,10 +154,10 @@ def print_collection(collection):
             print "---Album: {}".format(album)
 
 
-def find_possible_duplicate_albums(missing_from_usb, missing_from_drive):
+def find_duplicate_albums(missing_from_usb, missing_from_drive):
     """
-    :param missing_from_drive The MusicColleciton of music on USB but not Drive
-    :param missing_from_usb The MusicCollection of music on Drive but not USB
+    :param missing_from_drive The MusicLibrary of music on USB but not Drive
+    :param missing_from_usb The MusicLibrary of music on Drive but not USB
     Sometimes, usually due to unicode fuckery, albums will be compared as inequal even though they are.
     This function looks for strings that differ due to unicode characters
     Or are substrings of each other.
@@ -189,7 +208,7 @@ def check_duplicate_string(s1, s2):
 def fix_possible_duplicate_albums(missing_from_usb, missing_from_drive):
     """
     :param missing_from_drive The MusicColleciton of music on USB but not Drive
-    :param missing_from_usb The MusicCollection of music on Drive but not USB
+    :param missing_from_usb The MusicLibrary of music on Drive but not USB
     Update files to match
     """
     raise NotImplementedError

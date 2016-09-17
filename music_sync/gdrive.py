@@ -1,66 +1,67 @@
 # Google Drive functionality 
 from pydrive.auth import GoogleAuth
 import cannery
-import datetime
 import music_sync_utils
 
 
 # Collection Filling
 
-def add_artist(google_drive_collection, artist_name):
-    if artist_name not in google_drive_collection.collection:
-        google_drive_collection.collection[artist_name] = music_sync_utils.ArtistItem(artist_name)
+
+def add_artist(collection, artist_name, etag):
+    if artist_name not in collection:
+        collection[artist_name] = music_sync_utils.ArtistItem(artist_name, etag)
         print "added artist {}".format(artist_name)
 
 
-def fill_google_drive_collection(google_drive_collection, drive, folder):
+def fill_google_drive_collection(google_drive_library, drive, folder):
     """
-    :param google_drive_collection: GoogleDriveCollection object to fill with metadata from Google Drive
+    :param google_drive_library: GoogleDriveCollection object to fill with metadata from Google Drive
     :param drive: the GoogleDrive object to pull metadata from Google Drive
     :param folder: the name of the folder to pull metadata from. Currently must be in the root folder
     """
     # Check last mod by date for music folder and fill from cache if possible
-    cache_collection = cannery.get_cached_drive_collection(folder)
-    if cache_collection:
-        print "hey its in the cache"
-        return cache_collection
+    filled_collection = {}
+    collection_cache = cannery.get_cached_drive_library(folder).collection
     drive_artists = list_folder(drive, folder['id'])
     for drive_artist in drive_artists:
-        # Check last mod by date for artist and fill from cache if possible
         artist_name = drive_artist['title']
-        add_artist(google_drive_collection, artist_name)
-        fill_albums_for_artist(google_drive_collection, drive, drive_artist)
-    return google_drive_collection
+        if artist_name in collection_cache:
+            artist_item_cached = collection_cache[artist_name]
+            if drive_artist.metadata['etag'] == artist_item_cached.etag:
+                filled_collection[artist_name] = collection_cache[artist_name]
+        else:
+            add_artist(google_drive_library.collection, artist_name, drive_artist.metadata['etag'])
+            fill_albums_for_artist(google_drive_library, drive, drive_artist)
+    return google_drive_library.collection
 
 
-def fill_albums_for_artist(google_drive_collection, drive, artist):
+def fill_albums_for_artist(google_drive_library, drive, drive_artist):
     """
-    :param google_drive_collection: The GoogleDriveCollection
+    :param google_drive_library: The GoogleDriveLibrary
     :param drive: The GoogleDrive object to use
-    :param artist: GoogleDriveFile of an artist
+    :param drive_artist: GoogleDriveFile of an artist
     :return: Size of artist
     """
-    # Check last mod by date and fill from cache if possible
-    drive_albums = list_folder(drive, artist['id'])
-    album_list = google_drive_collection.collection[artist['title']].albums
+    artist_name = drive_artist['title']
+    drive_albums = list_folder(drive, drive_artist['id'])
+    album_list = google_drive_library.collection[artist_name].albums
     audio_in_artist = []
-    for drive_album in drive_albums:
-        file_extension_type = get_file_ext_type(drive_album)
-        if drive_album['title'] not in album_list and file_extension_type is 'folder':
-            file_size = get_album_size_drive(drive, drive_album['id'])
-            new_album = music_sync_utils.AlbumItem(drive_album['title'], file_size)
-            add_artist(google_drive_collection, artist['title'])
-            google_drive_collection.collection[artist['title']].albums.append(new_album)
-            print "-----added album {}".format(new_album.name)
-        if file_extension_type is 'audio' and artist['title'] not in audio_in_artist:
-            audio_in_artist.append(artist['title'])
-        # album_size = cannery.get_album_size_from_cache(album['id'])
-        # if not album_size:
-        #     album_size = get_album_size_drive(drive, album['id'])
-        # if album_size:
-        #    size += album_size
 
-    # TODO: Move this
+    for drive_album in drive_albums:
+        album_name = drive_album['title']
+        file_extension_type = get_file_ext_type(drive_album)
+
+        if album_name not in album_list and file_extension_type is 'folder':
+            file_size = get_album_size_drive(drive, drive_album['id'])
+            new_album = music_sync_utils.AlbumItem(album_name, file_size)
+            add_artist(google_drive_library.collection, artist_name)
+            google_drive_library.collection[artist_name].albums.append(new_album)
+            print "-----added album {}".format(new_album.name)
+
+        if file_extension_type is 'audio' and artist_name not in audio_in_artist:
+            audio_in_artist.append(artist_name)
+
+    # TODO: Move this?
     if audio_in_artist:
         print "Heads up, you have audio files directly in the following artists."
         print "You should put them in a folder by album instead."
@@ -110,6 +111,7 @@ def get_file_from_root(drive, file_title):
     return title_matches
 
 
+# TODO: Fix this hacky code
 def get_folder_from_root(drive, file_title):
     """
     Returns the file/directory as a GoogleDriveFile with the given title.
@@ -163,5 +165,4 @@ def get_album_size_drive(drive, album_id):
         file_size = int(track["quotaBytesUsed"])
         if file_size is not None:
             size += file_size
-    cannery.add_album_to_cache(album_id, size, datetime.datetime.now())
     return size

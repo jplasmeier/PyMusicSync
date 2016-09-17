@@ -4,6 +4,7 @@
 # License: MIT License
 from subprocess import call, check_output
 import os, re, pprint
+import music_sync_utils
 
 df_info = {}
 device_info = {}
@@ -13,7 +14,7 @@ class DF_Device:
     Class to store information about a device from df
     """
 
-    #def __init__(self, filesystem, size, used, avail, capacity, iused, ifree, pct_iused, mounted_on):
+    # def __init__(self, filesystem, size, used, avail, capacity, iused, ifree, pct_iused, mounted_on):
     #    self.filesystem = filesystem
     #    self.size = size
     #    self.used = used
@@ -137,17 +138,20 @@ def get_usb_collection(device_path):
     usb_collection = {} 
     try:
         artists = os.listdir(device_path)
-    except:
-        print "Error accessing USB device."
-
+    except Exception, err:
+        print "Error accessing USB device: {}".format(err)
     for artist in artists:
+        # Use path library to concatenate instead? For portability's sake
         artist_path = device_path + '/' + artist
         # Only grab directories and non-hidden files
+        # They are hidden for chrissakes
         if os.path.isdir(artist_path) and not artist.startswith('.'):
             albums_and_files = os.listdir(artist_path)
             for album_candidate in albums_and_files:
                 if os.path.isdir(artist_path + '/' + album_candidate):
                     if artist not in usb_collection:
-                        usb_collection[artist] = [] 
-                    usb_collection[artist].append(album_candidate)
+                        new_artist = music_sync_utils.ArtistItem(artist)
+                        usb_collection[artist] = new_artist
+                    new_album = music_sync_utils.AlbumItem(album_candidate)
+                    usb_collection[artist].albums.append(new_album)
     return usb_collection
