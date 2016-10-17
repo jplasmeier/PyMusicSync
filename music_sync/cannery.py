@@ -16,6 +16,9 @@ usb_collection_cache_path = "usb_collection_cache_path.p"
 def pickle_something(thing, filepath):
     try:
         with open(filepath, "wb") as fp:
+            print "pickling", thing
+            if thing.collection:
+                print thing.collection
             pickle.dump(thing, fp)
     except Exception, err:
         print "Error Pickling {0} to {1}: {2}".format(thing, filepath, err)
@@ -33,15 +36,23 @@ def load_something(filepath):
         print "Error loading from {0}: {1}".format(filepath, err)
 
 
-def pickle_drive_library(library):
-    return pickle_something(library, drive_library_cache_path)
+def pickle_drive_library(library, folder):
+    cached_library = get_cached_drive_library(folder)
+    if cached_library is not None and cached_library.etag != library.etag:
+        print "Saving library changes to cache"
+        return pickle_something(library, drive_library_cache_path)
+    elif cached_library is None:
+        pickle_something(library, drive_library_cache_path)
+    else:
+        print "Nothing to update in cache."
+        return
 
 
 def load_drive_library():
     return load_something(drive_library_cache_path)
 
 
-# TODO: Test?
+# TODO: Clean up
 def get_cached_drive_library(folder):
     """
     Returns a cached version of the Drive collection if there is one
@@ -50,12 +61,20 @@ def get_cached_drive_library(folder):
     """
     library_cache = load_drive_library()
     # etags match -> return cache
+    if not library_cache:
+        return
     if folder.metadata['etag'] == library_cache.etag:
-        # TODO: Remove
-        print music_sync_utils.print_collection(library_cache)
         return library_cache
     else:
         return
+
+
+def get_cached_drive_collection(folder):
+    drive_library = get_cached_drive_library(folder)
+    if drive_library is not None:
+        return drive_library.collection
+    else:
+        return {}
 
 
 def pickle_ioreg(ioreg_device, ioreg_file):

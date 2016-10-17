@@ -7,65 +7,57 @@ import music_sync_utils
 # Collection Filling
 
 
-def add_artist(collection, artist_name, etag):
-    if artist_name not in collection:
-        collection[artist_name] = music_sync_utils.ArtistItem(artist_name, etag)
-        print "added artist {}".format(artist_name)
-
-
-def fill_google_drive_collection(google_drive_library, drive, folder):
+def get_google_drive_collection(drive, folder):
     """
-    :param google_drive_library: GoogleDriveCollection object to fill with metadata from Google Drive
     :param drive: the GoogleDrive object to pull metadata from Google Drive
     :param folder: the name of the folder to pull metadata from. Currently must be in the root folder
     """
-    # Check last mod by date for music folder and fill from cache if possible
     filled_collection = {}
-    collection_cache = cannery.get_cached_drive_library(folder).collection
+    collection_cache = cannery.get_cached_drive_collection(folder)
     drive_artists = list_folder(drive, folder['id'])
     for drive_artist in drive_artists:
-        artist_name = drive_artist['title']
-        if artist_name in collection_cache:
-            artist_item_cached = collection_cache[artist_name]
-            if drive_artist.metadata['etag'] == artist_item_cached.etag:
-                filled_collection[artist_name] = collection_cache[artist_name]
-        else:
-            add_artist(google_drive_library.collection, artist_name, drive_artist.metadata['etag'])
-            fill_albums_for_artist(google_drive_library, drive, drive_artist)
-    return google_drive_library.collection
+        drive_artist_name = drive_artist['title']
+        drive_artist_etag = drive_artist.metadata['etag']
+        # Artist not in collection yet
+        if drive_artist_name not in filled_collection:
+            # Artist in cache and matches etag
+            if drive_artist_name in collection_cache and drive_artist_etag == collection_cache[drive_artist_name].etag:
+                filled_collection[drive_artist_name] = collection_cache[drive_artist_name]
+            # Add Drive Artist
+            else:
+                new_artist = DriveArtistItem(drive_artist_name, drive_artist_etag)
+                new_artist.get_albums_for_artist(drive, drive_artist)
+                filled_collection[drive_artist_name] = new_artist
+            print "Added Artist: {}".format(drive_artist_name)
+    return filled_collection
 
 
-def fill_albums_for_artist(google_drive_library, drive, drive_artist):
-    """
-    :param google_drive_library: The GoogleDriveLibrary
-    :param drive: The GoogleDrive object to use
-    :param drive_artist: GoogleDriveFile of an artist
-    :return: Size of artist
-    """
-    artist_name = drive_artist['title']
-    drive_albums = list_folder(drive, drive_artist['id'])
-    album_list = google_drive_library.collection[artist_name].albums
-    audio_in_artist = []
+class DriveArtistItem(music_sync_utils.ArtistItem):
 
-    for drive_album in drive_albums:
-        album_name = drive_album['title']
-        file_extension_type = get_file_ext_type(drive_album)
+    # This needs to be a bound method in a Google Drive subclass of the ArtistItem.
+    def get_albums_for_artist(self, drive, drive_artist):
+        """
+        Given an ArtistItem, find its albums in Drive and return a list of them
+        :param new_artist: An ArtistItem to get albums for. May include existing albums which should be returned as well
+        :param drive: The GoogleDrive object
+        :param drive_artist: The Drive Artist to get new albums from
+        :return: A list of albums. Should include existing albums and new ones.
+        """
 
-        if album_name not in album_list and file_extension_type is 'folder':
-            file_size = get_album_size_drive(drive, drive_album['id'])
-            new_album = music_sync_utils.AlbumItem(album_name, file_size)
-            add_artist(google_drive_library.collection, artist_name)
-            google_drive_library.collection[artist_name].albums.append(new_album)
-            print "-----added album {}".format(new_album.name)
-
-        if file_extension_type is 'audio' and artist_name not in audio_in_artist:
-            audio_in_artist.append(artist_name)
-
-    # TODO: Move this?
-    if audio_in_artist:
-        print "Heads up, you have audio files directly in the following artists."
-        print "You should put them in a folder by album instead."
-        print sorted(audio_in_artist)
+        audio_in_artist = []
+        #     drive_albums = [a for a in list_folder(drive, drive_artist['id']) if get_file_ext_type(a) is 'folder']
+        drive_albums = list_folder(drive, drive_artist['id'])
+        for drive_album in drive_albums:
+            if drive_album['title'] not in self.albums and get_file_ext_type(drive_album) is 'folder':
+                album_size = get_album_size_drive(drive, drive_album['id'])
+                new_album = music_sync_utils.AlbumItem(drive_album['title'], album_size)
+                self.albums.append(new_album)
+                print "-----Added Album: {}".format(new_album.name)
+            elif get_file_ext_type(drive_album) is 'audio':
+                audio_in_artist.append(drive_album['title'])
+        if audio_in_artist:
+            print "Heads up, you have some audio files directly under an artist: ", audio_in_artist
+        return self.albums
 
 
 # Drive Utilities
