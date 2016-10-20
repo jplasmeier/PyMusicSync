@@ -167,10 +167,10 @@ def print_collection(collection):
 def get_difference(album, artist_name, missing_from_usb):
     print 'getting diff albums than {0}'.format(album)
     if album in missing_from_usb.collection[artist_name].albums:
-        print 'Obvious false positive: {0} is in {1}'.format(album, missing_from_usb[artist_name].albums)
+        print 'Obvious false positive: {0} is in {1}'.format(album, ', '.join(str(a) for a in missing_from_usb.collection[artist_name].albums))
         return None
     for usb_album in missing_from_usb.collection[artist_name].albums:
-        if check_duplicate_string(usb_album.name, album.name):
+        if check_duplicate_string(usb_album.name, (c for c in album.name if c not in usb_album.name)):
             print 'False Positive detected! {0} and {1} are actually the same'.format(usb_album.name, album.name)
             return None
     print 'Album {0} not found in missing_from_usb, so it\'s actually missing'.format(album)
@@ -271,7 +271,7 @@ def check_duplicate_string(s1, s2):
     keys_s1 = set(chars_s1.keys())
     keys_s2 = set(chars_s2.keys())
     shared = keys_s1 & keys_s2
-    if len(shared) > 0.7*len(keys_s1) or len(shared) > 0.7*len(keys_s2):
+    if len(shared) > 0.8*len(keys_s1) or len(shared) > 0.8*len(keys_s2):
         return True
     else:
         return False

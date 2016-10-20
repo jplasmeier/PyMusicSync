@@ -126,8 +126,12 @@ class TestSubtractCollectionElements(unittest.TestCase):
             self.assertEqual(actual_result.collection[artist], expected_lib.collection[artist])
             self.assertEqual(actual_result.collection[artist].albums, expected_lib.collection[artist].albums)
 
-
     def test_missing_album(self):
+        """
+        subtract_collection_elements test
+        Tests for to see if albums subtract properly.
+        :return:
+        """
         # Album 4 is Album 3 with one fewer album.
         a1 = create_stock_artist(1)
         a2 = create_stock_artist(2)
