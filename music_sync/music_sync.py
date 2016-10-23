@@ -60,18 +60,13 @@ def main():
     missing_from_usb = music_sync_utils.subtract_collection_elements(google_drive_library, usb_music)
     missing_from_drive = music_sync_utils.subtract_collection_elements(usb_music, google_drive_library)
 
-    print 'missing from usb: ', missing_from_usb
-    print 'missing from drive: ', missing_from_drive
-
-    missing_from_usb = music_sync_utils.find_duplicate_albums(missing_from_usb, missing_from_drive)
-    print 'missing from usb post dup: ', missing_from_usb.collection
-
-    missing_from_drive = music_sync_utils.find_duplicate_albums(missing_from_drive, missing_from_usb)
+    missing_from_usb_less = music_sync_utils.find_duplicate_albums(missing_from_usb, missing_from_drive)
+    missing_from_drive_less = music_sync_utils.find_duplicate_albums(missing_from_drive, missing_from_usb)
 
     print "The following are missing from your USB device"
-    music_sync_utils.print_collection(missing_from_usb.collection)
+    music_sync_utils.print_collection(missing_from_usb_less.collection)
     print "The following are missing from your Drive"
-    music_sync_utils.print_collection(missing_from_drive.collection)
+    music_sync_utils.print_collection(missing_from_drive_less.collection)
 
     # We can pickle the IOREG stuff because its serial no. is invariant,
     # But we can't be sure that its mount point in df will be the same.

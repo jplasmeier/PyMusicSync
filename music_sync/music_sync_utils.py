@@ -83,6 +83,9 @@ class ArtistItem(CollectionItem):
         self.etag = etag
         self.albums = []
 
+    def __str__(self):
+        return self.name
+
     def get_file_size_of_albums(self):
         size = 0
         for album in self.albums:
@@ -119,7 +122,6 @@ def subtract_collection_elements(library_a, library_b):
                     if artist_name not in result_library.collection:
                         result_library.collection[artist_name] = ArtistItem(artist_name, library_a.collection[artist_name].etag)
                     result_library.collection[artist_name].albums.append(album)
-    print 'result of subtraction: ', result_library.collection
     return result_library
 
 
@@ -165,15 +167,12 @@ def print_collection(collection):
 
 
 def get_difference(album, artist_name, missing_from_usb):
-    print 'getting diff albums than {0}'.format(album)
     if album in missing_from_usb.collection[artist_name].albums:
-        print 'Obvious false positive: {0} is in {1}'.format(album, ', '.join(str(a) for a in missing_from_usb.collection[artist_name].albums))
-        return None
+        return
     for usb_album in missing_from_usb.collection[artist_name].albums:
-        if check_duplicate_string(usb_album.name, (c for c in album.name if c not in usb_album.name)):
+        if check_duplicate_string(usb_album.name, album.name):
             print 'False Positive detected! {0} and {1} are actually the same'.format(usb_album.name, album.name)
-            return None
-    print 'Album {0} not found in missing_from_usb, so it\'s actually missing'.format(album)
+            return
     return album
 
 
@@ -186,68 +185,25 @@ def find_duplicate_albums(missing_from_usb, missing_from_drive):
     :return: A tuple of two libraries, one for each of the actual libraries, containing the actually missing artists.
     """
     actually_missing_from_usb = MusicLibrary(missing_from_usb.etag)
-    print 'Candidate duplicates on USB: ', missing_from_usb.collection
-    print 'Cancdidate duplicates on Drive: ', missing_from_drive.collection
 
-    # TODO: Make this actually work
-    # Need to be very careful with determining duplicates and whatnot
     # TODO: Write unittests
-    missing_usb_keys =  missing_from_usb.collection.keys()
-    print 'missing from drive', missing_from_drive.collection
     for artist_name in missing_from_drive.collection:
         if artist_name in missing_from_usb.collection:
-            print 'artist name from weird LC: ', artist_name
             for album in missing_from_drive.collection[artist_name].albums:
                 different_album = get_difference(album, artist_name, missing_from_usb)
-                if artist_name not in actually_missing_from_usb.collection:
-                    actually_missing_from_usb.collection[artist_name] = ArtistItem(artist_name, missing_from_usb.collection[artist_name].etag)
                 if different_album is not None:
+                    if artist_name not in actually_missing_from_usb.collection:
+                        actually_missing_from_usb.collection[artist_name] = ArtistItem(artist_name,
+                                                                                       missing_from_usb.collection[
+                                                                                           artist_name].etag)
                     actually_missing_from_usb.collection[artist_name].albums.append(different_album)
-    print 'actually missing', actually_missing_from_usb
+        else:
+            if artist_name not in actually_missing_from_usb.collection:
+                actually_missing_from_usb.collection[artist_name] = ArtistItem(artist_name,
+                                                                               missing_from_drive.collection[
+                                                                                   artist_name].etag)
+            actually_missing_from_usb.collection[artist_name].albums  = missing_from_drive.collection[artist_name].albums
     return actually_missing_from_usb
-
-# def find_duplicate_albums(missing_from_usb, missing_from_drive):
-#     """
-#     :param missing_from_drive The MusicLibrary of music on USB but not Drive
-#     :param missing_from_usb The MusicLibrary of music on Drive but not USB
-#     Sometimes, usually due to unicode fuckery, albums will be compared as inequal even though they are.
-#     This function looks for strings that differ due to unicode characters
-#     Or are substrings of each other.
-#     """
-#     # print 'missing from usb', missing_from_usb
-#     # print 'missing from drive', missing_from_drive
-#     clean_missing_from_usb = {}
-#     clean_missing_from_drive = {}
-#     # print 'DT in missing from drive: {0}'.format(''.join([str(album) for album in missing_from_drive['Dream Theater'].albums]))
-#     print 'Candidate duplicates (usb): ', missing_from_usb
-#     print 'Candidate duplicates (drive): ', missing_from_drive
-#     for artist_name in list(missing_from_usb.keys()):
-#         if artist_name in missing_from_drive:
-#             for album in missing_from_usb[artist_name].albums:
-#                 # for album in the albums of the artist in missing_from_usb
-#                 drive_album = [m for m in missing_from_drive[artist_name].albums if m is album][0]
-#                 # if it's in the albums of the missing_from_drive artist too it's a duplicate
-#                 if album in missing_from_drive[artist_name].albums:
-#                     print 'Obvious duplicate is obvious: {0} and {1} are the same.'.format(drive_album,album)
-#                 # if it's quite close to an album in drive
-#                 elif check_duplicate_string(album, drive_album):
-#                     print 'Less obvious false positive: {0} and {1}'.format(drive_album, album)
-#                 # album is in missing_from_usb but not missing_from_drive
-#                 else:
-#                     print 'Album is not in missing_from_drive, only missing_from_usb.'
-#                     if album not in missing_from_drive[artist_name]:
-#                         clean_missing_from_usb[artist_name] = ArtistItem(artist_name, missing_from_usb[artist_name].etag)
-#                     clean_missing_from_usb[artist_name].albums.append(album)
-#                 '''
-#                 for drive_album in missing_from_drive[artist].albums:
-#                     if check_duplicate_string(drive_album, album):
-#                         print "Detected false positive: {0} and {1}".format(drive_album, album)
-#                     else:
-#                         print "Determined {0} and {1} are not the same album.".format(drive_album, album)
-#                         clean_missing_from_drive[artist] = missing_from_drive[artist]
-#                         clean_missing_from_usb[artist] = missing_from_usb[artist]
-#                 '''
-#     return clean_missing_from_usb, clean_missing_from_drive
 
 
 def check_duplicate_string(s1, s2):
@@ -257,9 +213,12 @@ def check_duplicate_string(s1, s2):
     Check for the approximate equality of strings
     Do this by comparing character freuqency
     """
+    words_s1 = s1.split(' ')
+    words_s2 = s2.split(' ')
+    s1 = ' '.join(w for w in words_s1 if w not in words_s2)
+    s2 = ' '.join(w for w in words_s2 if w not in words_s1)
     chars_s1 = {}
     chars_s2 = {}
-    shared = {}
     for c in str(s1):
         if c not in chars_s1:
             chars_s1[c] = 0
@@ -268,10 +227,10 @@ def check_duplicate_string(s1, s2):
         if c not in chars_s2:
             chars_s2[c] = 0
         chars_s2[c] += 1
-    keys_s1 = set(chars_s1.keys())
-    keys_s2 = set(chars_s2.keys())
+    keys_s1 = set(k for k in chars_s1.keys() if ord(k) < 122)
+    keys_s2 = set(k for k in chars_s2.keys() if ord(k) < 122)
     shared = keys_s1 & keys_s2
-    if len(shared) > 0.8*len(keys_s1) or len(shared) > 0.8*len(keys_s2):
+    if len(shared) > 0.6*len(keys_s1) or len(shared) > 0.6*len(keys_s2):
         return True
     else:
         return False

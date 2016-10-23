@@ -5,6 +5,28 @@ import music_sync_utils
 import random
 
 
+def get_stock_collection(cat_number):
+    a1 = create_stock_artist(1)
+    a2 = create_stock_artist(2)
+    a3 = create_stock_artist(3)
+    collection = {}
+    if cat_number == 1:
+        collection[a1.name] = a1
+        collection[a2.name] = a2
+        collection[a3.name] = a3
+        return collection
+    if cat_number == 2:
+        collection[a1.name] = a1
+        collection[a2.name] = a2
+        return collection
+
+
+def get_stock_library(cat_number):
+    if cat_number == 1:
+        etag = 'this is stock lib 1'
+        lib_a = music_sync_utils.MusicLibrary(etag)
+
+
 def get_random_string(length):
     s = []
     for i in range(0, length):
@@ -95,7 +117,8 @@ class TestFindDuplicateAlbums(unittest.TestCase):
         Or are substrings of each other.
         :return:
         """
-        coll_a = {}
+        lib_a = music_sync_utils.MusicLibrary('lib a')
+        lib_a
 
 
 
@@ -104,21 +127,14 @@ class TestSubtractCollectionElements(unittest.TestCase):
     def test_missing_artist(self):
         lib_a = music_sync_utils.MusicLibrary('a')
         lib_b = music_sync_utils.MusicLibrary('b')
+
         # Has 3 unique artists
         # Has 2 unique artist
-
-        a1 = create_stock_artist(1)
-        a2 = create_stock_artist(2)
-        a3 = create_stock_artist(3)
-
-        lib_a.collection[a1.name] = a1
-        lib_a.collection[a2.name] = a2
-        lib_a.collection[a3.name] = a3
-
-        lib_b.collection[a1.name] = a1
-        lib_b.collection[a2.name] = a2
+        lib_a.collection = get_stock_collection(1)
+        lib_b.collection = get_stock_collection(2)
 
         expected_lib = music_sync_utils.MusicLibrary('expected')
+        a3 = create_stock_artist(3)
         expected_lib.collection = {a3.name: a3}
         actual_result = music_sync_utils.subtract_collection_elements(lib_a, lib_b)
         self.assertEqual(expected_lib.collection, actual_result.collection)
