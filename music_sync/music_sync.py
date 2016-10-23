@@ -4,6 +4,7 @@ import usb
 import cannery
 import gdrive
 import music_sync_utils
+import sync
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -67,6 +68,10 @@ def main():
     music_sync_utils.print_collection(missing_from_usb_less.collection)
     print "The following are missing from your Drive"
     music_sync_utils.print_collection(missing_from_drive_less.collection)
+
+    # Download from Drive to USB
+    temp_music = '/Users/jgp/Dropbox/ProgrammingProjects/PyMusicSync/music_sync/temp_music/' #sync.download_gdrive_locally(drive, music_folder, missing_from_drive_less.collection)
+    sync.sync_music_from_temp_to_USB(usb_music.file_path, temp_music)
 
     # We can pickle the IOREG stuff because its serial no. is invariant,
     # But we can't be sure that its mount point in df will be the same.
