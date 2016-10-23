@@ -6,7 +6,24 @@ import subprocess
 MYDIR = os.path.dirname(__file__)
 
 
-def get_gdrive_artists_and_albums_from_collection(drive, music_folder, collection):
+def get_gdrive_albums_from_collection(drive, music_folder, collection):
+    gdrive_artists = {}
+    gdrive_albums = []
+    for artist_name in collection:
+        # find the folder with this name
+        gdrive_artists[artist_name] = []
+        drive_artists = gdrive.list_folder(drive, music_folder['id'])
+        for d_a in drive_artists:
+            if d_a['title'] == artist_name:
+                drive_albums = gdrive.list_folder(drive, d_a['id'])
+                for drive_album in drive_albums:
+                    if drive_album['title'] in collection[artist_name].albums:
+                        gdrive_albums.append(drive_album)
+                        gdrive_artists[artist_name].append(drive_album)
+    return gdrive_albums  # [gdrive_albums[g]['title'] for g in gdrive_albums]
+
+
+def get_gdrive_artists_from_collection(drive, music_folder, collection):
     gdrive_artists = {}
     gdrive_albums = []
     for artist_name in collection:

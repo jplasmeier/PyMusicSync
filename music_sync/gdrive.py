@@ -146,6 +146,15 @@ def list_folder(drive, folder_id):
     return drive.ListFile(_q).GetList()
 
 
+def get_artist_size(drive, artist_id):
+    albums = list_folder(drive, artist_id)
+    size = 0
+    print 'albs', albums
+    for album in albums:
+        size += int(album['quotaBytesUsed'])
+    return size
+
+
 def get_album_size_drive(drive, album_id):
     """
     Gets the size of an album in Drive.
@@ -153,6 +162,7 @@ def get_album_size_drive(drive, album_id):
     """
     tracks = list_folder(drive, album_id)
     size = 0
+    print 'tracks', tracks
     for track in tracks:
         file_size = int(track["quotaBytesUsed"])
         if file_size is not None:
