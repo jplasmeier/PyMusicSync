@@ -15,21 +15,17 @@ usb_collection_cache_path = "usb_collection_cache_path.p"
 
 def pickle_something(thing, filepath):
     try:
-        with open(filepath, "wb") as fp:
-            print "pickling", thing
-            if thing.collection:
-                print thing.collection
+        with open(filepath, "w") as fp:
             pickle.dump(thing, fp)
     except Exception, err:
         print "Error Pickling {0} to {1}: {2}".format(thing, filepath, err)
     return True
 
-
 def load_something(filepath):
     try:
         thing = None
         if os.path.isfile(filepath):
-            with open(filepath, "rb") as fp:
+            with open(filepath, "r") as fp:
                 thing = pickle.load(fp)
         return thing
     except Exception, err:
@@ -69,12 +65,25 @@ def get_cached_drive_library(folder):
         return
 
 
-def get_cached_drive_collection(folder):
-    drive_library = get_cached_drive_library(folder)
+def get_cached_drive_collection(gdrive_folder=None):
+    """
+    For some reason this function takes an optional Google Drive folder
+    :param folder:
+    :return:
+    """
+    if gdrive_folder is not None:
+        drive_library = get_cached_drive_library(gdrive_folder)
+    else:
+        drive_library = get_cached_independent_drive_collection()
     if drive_library is not None:
         return drive_library.collection
     else:
         return {}
+
+def get_cached_independent_drive_collection():
+    library = load_drive_library()
+    if library is not None:
+        return library.collection
 
 
 def pickle_ioreg(ioreg_device, ioreg_file):

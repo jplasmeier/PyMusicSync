@@ -12,7 +12,6 @@ sys.setdefaultencoding('utf8')
 # IOREG device info pickle file
 ioreg_file = "ioreg_file.p"
 
-
 def main():
     # Drive Setup
     gauth = gdrive.login()
@@ -55,23 +54,20 @@ def main():
     usb_music.collection = usb.get_usb_collection(usb_music.file_path)
     usb_music.collection = music_sync_utils.clean_unicode(usb_music.collection)
 
-
     missing_from_usb = music_sync_utils.subtract_collection_elements(google_drive_library, usb_music)
     missing_from_drive = music_sync_utils.subtract_collection_elements(usb_music, google_drive_library)
 
-    missing_from_usb_less = music_sync_utils.find_duplicate_albums(missing_from_usb, missing_from_drive)
-    missing_from_drive_less = music_sync_utils.find_duplicate_albums(missing_from_drive, missing_from_usb)
+    missing_from_drive_less = music_sync_utils.find_duplicate_albums(missing_from_usb, missing_from_drive)
+    missing_from_usb_less = music_sync_utils.find_duplicate_albums(missing_from_drive, missing_from_usb)
 
     print "The following are missing from your USB device"
     music_sync_utils.print_collection(missing_from_usb_less.collection)
     print "The following are missing from your Drive"
     music_sync_utils.print_collection(missing_from_drive_less.collection)
 
-    gdrive_collection = sync.get_gdrive_albums_from_collection(drive, music_folder, missing_from_drive_less.collection)
-    gdrive_sync_size = 0
-    for gdrive_artist in gdrive_collection:
-        gdrive_sync_size += gdrive.get_artist_size(drive, gdrive_artist['id'])
-    gdrive_sync_size =  gdrive_sync_size/ 1024.0 / 1024.0
+    # Get albums to sync. Need artists too.
+    gdrive_collection = sync.get_gdrive_artists_from_collection(drive, music_folder, missing_from_usb_less.collection)
+    gdrive_sync_size = sync.get_size_of_syncing_collection(drive, gdrive_collection)
     print 'Size of GDrive files to be added (mb): ', gdrive_sync_size
     # watch out that size is hard coded against the df call - can return different things
     free_space_usb = int(df_device.avail)/1024.0
@@ -79,10 +75,17 @@ def main():
     if free_space_usb < gdrive_sync_size:
         print "Not enough space on USB Device. Exiting..."
         sys.exit(0)
+    free_space_pc = sync.get_free_space_on_local()
+    print "Free space on PC  (mb)", free_space_pc
+    if free_space_pc < gdrive_sync_size:
+        sync.buffered_sync_gdrive_to_usb(drive, gdrive_collection, usb_music.file_path)
+        print "Not enough space on laptop. Exiting..."
+        sys.exit(0)
 
     # Download from Drive to USB
-    temp_music = '/Users/jgp/Dropbox/ProgrammingProjects/PyMusicSync/music_sync/temp_music/' #sync.download_gdrive_locally(drive, music_folder, missing_from_drive_less.collection)
-    #xsync.sync_music_from_temp_to_USB(usb_music.file_path, temp_music)
+    #temp_music = '/Users/jgp/Dropbox/ProgrammingProjects/PyMusicSync/music_sync/temp_music/'
+    temp_music = sync.download_gdrive_locally(drive, music_folder, missing_from_drive_less.collection)
+    sync.sync_music_from_temp_to_USB(usb_music.file_path, temp_music)
 
     # We can pickle the IOREG stuff because its serial no. is invariant,
     # But we can't be sure that its mount point in df will be the same.

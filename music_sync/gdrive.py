@@ -3,6 +3,9 @@ from pydrive.auth import GoogleAuth
 import cannery
 import music_sync_utils
 
+raw_metadata_artists_path = 'raw_metadata_artists.p'
+raw_metadata_albums_path = 'raw_metadata_albums.p'
+
 
 # Collection Filling
 
@@ -12,12 +15,19 @@ def get_google_drive_collection(drive, folder):
     :param drive: the GoogleDrive object to pull metadata from Google Drive
     :param folder: the name of the folder to pull metadata from. Currently must be in the root folder
     """
+    raw_metadata_artists = {}
+    raw_metadata_albums = {}
+
     filled_collection = {}
     collection_cache = cannery.get_cached_drive_collection(folder)
     drive_artists = list_folder(drive, folder['id'])
+
     for drive_artist in drive_artists:
         drive_artist_name = drive_artist['title']
         drive_artist_etag = drive_artist.metadata['etag']
+        raw_metadata_artists[drive_artist_name] = drive_artist
+        if drive_artist_name not in raw_metadata_albums:
+            raw_metadata_albums[drive_artist_name] = []
         # Artist not in collection yet
         if drive_artist_name not in filled_collection:
             # Artist in cache and matches etag
@@ -26,9 +36,14 @@ def get_google_drive_collection(drive, folder):
             # Add Drive Artist
             else:
                 new_artist = DriveArtistItem(drive_artist_name, drive_artist_etag)
-                new_artist.get_albums_for_artist(drive, drive_artist)
+                drive_albums = new_artist.get_albums_for_artist(drive, drive_artist)
+                raw_metadata_albums[drive_artist_name] = drive_albums
                 filled_collection[drive_artist_name] = new_artist
             print "Added Artist: {}".format(drive_artist_name)
+
+    cannery.pickle_something(raw_metadata_artists, raw_metadata_artists_path)
+    print 'pickling for future use: ', raw_metadata_albums
+    cannery.pickle_something(raw_metadata_albums, raw_metadata_albums_path)
     return filled_collection
 
 
@@ -43,21 +58,20 @@ class DriveArtistItem(music_sync_utils.ArtistItem):
         :param drive_artist: The Drive Artist to get new albums from
         :return: A list of albums. Should include existing albums and new ones.
         """
-
         audio_in_artist = []
-        #     drive_albums = [a for a in list_folder(drive, drive_artist['id']) if get_file_ext_type(a) is 'folder']
         drive_albums = list_folder(drive, drive_artist['id'])
         for drive_album in drive_albums:
-            if drive_album['title'] not in self.albums and get_file_ext_type(drive_album) is 'folder':
+            drive_album_name = drive_album['title']
+            if drive_album_name not in self.albums and get_file_ext_type(drive_album) is 'folder':
                 album_size = get_album_size_drive(drive, drive_album['id'])
-                new_album = music_sync_utils.AlbumItem(drive_album['title'], album_size)
+                new_album = music_sync_utils.AlbumItem(drive_album_name, album_size)
                 self.albums.append(new_album)
                 print "-----Added Album: {}".format(new_album.name)
             elif get_file_ext_type(drive_album) is 'audio':
-                audio_in_artist.append(drive_album['title'])
+                audio_in_artist.append(drive_album_name)
         if audio_in_artist:
             print "Heads up, you have some audio files directly under an artist: ", audio_in_artist
-        return self.albums
+        return drive_albums
 
 
 # Drive Utilities
@@ -146,10 +160,9 @@ def list_folder(drive, folder_id):
     return drive.ListFile(_q).GetList()
 
 
-def get_artist_size(drive, artist_id):
-    albums = list_folder(drive, artist_id)
+def get_artist_size(drive, artist):
+    albums = list_folder(drive, artist['id'])
     size = 0
-    print 'albs', albums
     for album in albums:
         size += int(album['quotaBytesUsed'])
     return size
