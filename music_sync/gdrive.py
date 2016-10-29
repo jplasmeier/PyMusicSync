@@ -175,7 +175,6 @@ def get_album_size_drive(drive, album_id):
     """
     tracks = list_folder(drive, album_id)
     size = 0
-    print 'tracks', tracks
     for track in tracks:
         file_size = int(track["quotaBytesUsed"])
         if file_size is not None:

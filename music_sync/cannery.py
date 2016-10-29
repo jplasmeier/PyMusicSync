@@ -21,6 +21,7 @@ def pickle_something(thing, filepath):
         print "Error Pickling {0} to {1}: {2}".format(thing, filepath, err)
     return True
 
+
 def load_something(filepath):
     try:
         thing = None
@@ -79,6 +80,7 @@ def get_cached_drive_collection(gdrive_folder=None):
         return drive_library.collection
     else:
         return {}
+
 
 def get_cached_independent_drive_collection():
     library = load_drive_library()

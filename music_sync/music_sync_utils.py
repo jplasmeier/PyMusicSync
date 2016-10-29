@@ -1,11 +1,9 @@
 # Utilities for MusicSync
 import codecs
-import datetime
 import copy
 import os
 
 
-# TODO: Mixin vs Class? Semantics???
 class NameEqualityMixin(object):
 
     def __eq__(self, other):
@@ -41,15 +39,6 @@ class MusicLibrary(object):
             for album_item in self.collection[artist_name].albums:
                 s.append("---- Album: {}\n".format(album_item.name))
         return str(s)
-
-
-# TODO: Possibly deprecate
-class GoogleDriveLibrary(MusicLibrary):
-    """
-    Google Drive specific collection. Includes metadata from the GoogleDrive object.
-    """
-    def __init__(self, etag):
-        super(GoogleDriveLibrary, self).__init__(etag)
 
 
 class USBLibrary(MusicLibrary):

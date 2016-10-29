@@ -20,7 +20,7 @@ def main():
     music_folder = gdrive.get_folder_from_root(drive, folder_name)
 
     # Create GoogleDriveCollection
-    google_drive_library = music_sync_utils.GoogleDriveLibrary(music_folder.metadata['etag'])
+    google_drive_library = music_sync_utils.MusicLibrary(music_folder.metadata['etag'])
 
     # Check the cache first
     library_cache = cannery.get_cached_drive_library(music_folder)
