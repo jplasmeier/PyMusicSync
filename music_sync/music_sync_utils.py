@@ -21,8 +21,9 @@ class NameEqualityMixin(object):
 class MusicLibrary(object):
     """
     Class to store music collections in a way that is useful to this program.
+    :param etag: Optional parameter if there is somehow support for getting last mod by from children' children changes
     """
-    def __init__(self, etag):
+    def __init__(self, etag=None):
         self.collection = {}
         self.etag = etag
 
@@ -46,8 +47,7 @@ class USBLibrary(MusicLibrary):
     USB Device specific collection. Includes file path of device.
     """
     def __init__(self, path):
-        last_mod_by = os.path.getmtime(path)
-        super(USBLibrary, self).__init__(last_mod_by)
+        super(USBLibrary, self).__init__(os.path.getmtime(path))
         self.file_path = path
 
 
@@ -67,7 +67,12 @@ class CollectionItem(NameEqualityMixin):
 
 class ArtistItem(CollectionItem):
 
-    def __init__(self, name, etag):
+    def __init__(self, name, etag=None):
+        """
+        Initializes an ArtistItem object
+        :param name: The name of the Artist
+        :param etag: Optional parameter to include an etag for the Artist. Optional because Google Drive doesn't support
+        """
         super(ArtistItem, self).__init__(name)
         self.etag = etag
         self.albums = []

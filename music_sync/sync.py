@@ -5,7 +5,7 @@ import sys
 import subprocess
 import cannery
 from subprocess import check_output, CalledProcessError
-from collections import deque
+from collections import deque, OrderedDict
 
 raw_metadata_artists_path = 'raw_metadata_artists.p'
 raw_metadata_albums_path = 'raw_metadata_albums.p'
@@ -32,13 +32,14 @@ def get_free_space_on_local():
 
 def get_size_of_syncing_collection(drive, gdrive_collection):
     collection_cache = cannery.get_cached_independent_drive_collection()
+    print 'Out of curiosity, the collection cache looks like: ', collection_cache
     gdrive_sync_size = 0
     for gdrive_artist in gdrive_collection:
         if gdrive_artist in collection_cache:
             print 'Found artist {0} in cache!'.format(gdrive_artist)
             gdrive_sync_size += collection_cache[gdrive_artist].get_file_size_of_albums()
         else:
-            print 'Artist not in cache.'
+            print 'Artist {0} not in cache.'.format(gdrive_artist)
             gdrive_sync_size += gdrive.get_artist_size(drive, gdrive_artist['id'])
 
     gdrive_sync_size = gdrive_sync_size / 1024.0 / 1024.0
@@ -73,6 +74,13 @@ def get_gdrive_albums_from_collection(drive, music_folder, collection):
 
 #@profile
 def get_gdrive_artists_from_collection(drive, music_folder, collection):
+    """
+    This shit becomes gdrive_collection
+    :param drive:
+    :param music_folder:
+    :param collection:
+    :return:
+    """
     albums_cache = cannery.load_something(raw_metadata_albums_path)
     if albums_cache is None:
         albums_cache = {}
@@ -143,6 +151,13 @@ def sync_artist_from_temp_to_USB_and_delete(artist_path, temp_music_artist_path)
     returncode2 = subprocess.call(["rm"] + delete_arguments)
 
 
+def delete_folder(folder=None):
+    if folder is None:
+        folder = os.path.join(MYDIR, 'temp_music')
+    delete_arguments = ['-rf', folder]
+    return subprocess.call(["rm"] + delete_arguments)
+
+
 def buffered_sync_gdrive_to_usb(drive, gdrive_collection, usb_path):
     """
     Laptop doesn't have enough space to store all of the music that needs to go from Drive to USB
@@ -158,6 +173,8 @@ def buffered_sync_gdrive_to_usb(drive, gdrive_collection, usb_path):
     # Else, Rsync buffer to USB
 
     # Collection is artist ->
+    print 'Syncing collection: ', gdrive_collection
+    print 'To USB Path: ', usb_path
     artist_queue = deque()
     artist_queue.extend(gdrive_collection.keys())
     collection_cache = cannery.get_cached_independent_drive_collection()
@@ -166,28 +183,122 @@ def buffered_sync_gdrive_to_usb(drive, gdrive_collection, usb_path):
         os.mkdir(temp_music_dir)
 
     while artist_queue:
+
         artist_name = artist_queue.popleft()
         artist_path = os.path.join(usb_path, artist_name)
-
+        print 'Syncing artist {0} to path {1}'.format(artist_name, artist_path)
         new_dir_artist = os.path.join(temp_music_dir, artist_name)
         if not os.path.isdir(new_dir_artist):
             os.mkdir(new_dir_artist)
         space_on_local = get_free_space_on_local()
         if artist_name in collection_cache:
-            artist_size = collection_cache[artist_name].get_file_size_of_albums()
+            artist_size = collection_cache[artist_name].get_file_size_of_albums()/1024/1024
         else:
+            # WTF? should probably throw an exception
+            print "THIS SHOULD BE AN EXCEPTION HOLY SHIT WAT ARE YOU DOING"
             # Do it the shitty way
             artist_size = 9999999999999
+        print 'Artist {0} is size {1}.'.format(artist_name, artist_size)
+        print 'We have {0} mb left on local machine.'.format(space_on_local)
         if artist_size < space_on_local:
             for album in gdrive_collection[artist_name]:
-                tracks = gdrive.list_folder(drive, album['id'])
+                album_files = gdrive.list_folder(drive, album['id'])
                 new_dir_album = os.path.join(new_dir_artist, album['title'])
                 os.mkdir(new_dir_album)
-                print 'made dir ', new_dir_album
-                for track in tracks:
-                    # Parameter is the filepath to download to. Let's try to use the USB path, eh?
-                    print 'Saving to: ', new_dir_album + '/' + track['title']
-                    track.GetContentFile('/{0}/'.format(new_dir_album) + track['title'])
-
+                for album_file in album_files:
+                    if gdrive.get_file_ext_type(album_file) != 'folder':
+                        track_path = os.path.join(new_dir_album, album_file['title'])
+                        print 'Downloading to: ', track_path
+                        album_file.GetContentFile(track_path)
+                    # album_file is a folder, probably CD1/CD2 kinda thing
+                    else:
+                        tracks = gdrive.list_folder(drive, album_file['id'])
+                        sub_folder_path = os.path.join(new_dir_album, album_file['title'])
+                        if not os.path.isdir(sub_folder_path):
+                            os.mkdir(sub_folder_path)
+                        for track in tracks:
+                            if gdrive.get_file_ext_type(track) != 'folder':
+                                track_path = os.path.join(sub_folder_path, track['title'])
+                                print 'Downloading to: ', track_path
+                                track.GetContentFile(track_path)
         # Artist downloaded to client machine, now sync
         sync_artist_from_temp_to_USB_and_delete(artist_path, new_dir_artist)
+
+    # delete temp music
+    delete_folder(temp_music_dir)
+
+    return
+
+
+def remove_extra_bins(bins, min_size):
+    for idx, bin in enumerate(bins):
+        if bin[1] - bin[0] < min_size:
+            # Check if bin below and get size
+            if idx - 1 >= 0:
+                below_size = bins[idx-1][1] - bins[idx-1][0]
+            if idx + 1 < len(bins):
+                above_size = bins[idx+1][1] - bins[idx+1][0]
+
+
+
+def bin_folder(path):
+    """
+    Given a path containing only folders, group the folders into a fixed number of bins by alphabet.
+    :param path: The path containing folders to put into bins.
+    :return: Fuck if I know
+    """
+
+    # Okay well I guess we should get a list of the directories to bin
+    sub_dirs = []
+
+    dir_contents = os.listdir(path)
+    for item in dir_contents:
+        item_path = os.path.join(path,item)
+        if os.path.isdir(item_path) and '.' != item_path.startswith('.'):
+            sub_dirs.append(item)
+    print dir_contents
+    # So now we need to figure out how to bin these folders.
+    # At current scale (260 artist), as few as 5 bins is good.
+    # I'm going to say auto mode is floor of num of artists divided by a bin size 50.
+    bin_size = 50
+    num_bins = len(sub_dirs) / bin_size
+
+    # Now that we have the number of bins, we need to make the bins
+    # Make a dict of the index of the last Artist starting with that character.
+    char_index = OrderedDict()
+    rev_char_index = OrderedDict()
+
+
+    sub_dirs = sorted(sub_dirs)
+    incoming_char = sub_dirs[0][0]
+    for idx, artist in enumerate(sub_dirs):
+        c_0 = artist[0]
+        if c_0 != incoming_char:
+            # new char
+            rev_char_index[idx-1] = incoming_char
+            char_index[incoming_char] = idx - 1
+            incoming_char = c_0
+
+    # Cool, now we just need to assign the bins.
+    # First bin needs to start at 0 and last bin needs to end at len - 1 of course
+    bins = []
+    incoming_bin_idx = 0
+    j = 0
+    lagging_char = ''
+    for i in range(0, num_bins-1):
+
+
+        for char in char_index:
+            target_end = incoming_bin_idx + bin_size
+            print 'Bin {0}. Target folder idx is {1}. Checking char {2} w index {3}'.format(i, target_end, char, char_index[char])
+            if char_index[char] > target_end and lagging_char and char_index[lagging_char] > incoming_bin_idx:
+                print 'That\'s it for this bin. Including up to folder at idx {0}'.format(char_index[lagging_char])
+                bins.append((incoming_bin_idx, char_index[lagging_char]))
+                incoming_bin_idx = char_index[lagging_char]
+            lagging_char = char
+
+    bins.append((char_index[sorted(char_index.keys())[-2:][0]], char_index[char_index.keys()[-1:][0]]))
+    print 'bins ', bins
+
+    # Trim any tins bins (less than half spec size)
+    remove_extra_bins(bins, bin_size/2)

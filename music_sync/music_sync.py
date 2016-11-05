@@ -22,18 +22,9 @@ def main():
     # Create GoogleDriveCollection
     google_drive_library = music_sync_utils.MusicLibrary(music_folder.metadata['etag'])
 
-    # Check the cache first
-    library_cache = cannery.get_cached_drive_library(music_folder)
-    if library_cache:
-        google_drive_library = library_cache
-        print "library loaded: ", google_drive_library
-    else:
-        print "collection outdated", google_drive_library
-        google_drive_library.collection = gdrive.get_google_drive_collection(drive, music_folder)
-        print "collection updated", google_drive_library.collection
-        print "library: ", google_drive_library
-        google_drive_library.collection = music_sync_utils.clean_unicode(google_drive_library.collection)
-        print "collection updated", google_drive_library
+    google_drive_library.collection = gdrive.get_google_drive_collection(drive, music_folder)
+    google_drive_library.collection = music_sync_utils.clean_unicode(google_drive_library.collection)
+    print "collection updated", google_drive_library
 
     print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_library.get_collection_size()/1024/1024, google_drive_library.get_collection_size()/1000/1000/1000))
 
@@ -67,6 +58,7 @@ def main():
 
     # Get albums to sync. Need artists too.
     gdrive_collection = sync.get_gdrive_artists_from_collection(drive, music_folder, missing_from_usb_less.collection)
+    # gdrive_collection is a dict of artist_name: [drive_album]
     gdrive_sync_size = sync.get_size_of_syncing_collection(drive, gdrive_collection)
     print 'Size of GDrive files to be added (mb): ', gdrive_sync_size
     # watch out that size is hard coded against the df call - can return different things
@@ -84,8 +76,14 @@ def main():
 
     # Download from Drive to USB
     #temp_music = '/Users/jgp/Dropbox/ProgrammingProjects/PyMusicSync/music_sync/temp_music/'
-    temp_music = sync.download_gdrive_locally(drive, music_folder, missing_from_drive_less.collection)
-    sync.sync_music_from_temp_to_USB(usb_music.file_path, temp_music)
+    print 'Buffered Sync'
+    try:
+        sync.buffered_sync_gdrive_to_usb(drive, gdrive_collection, usb_music.file_path)
+    except:
+        sync.delete_folder()
+
+    #temp_music = sync.download_gdrive_locally(drive, music_folder, missing_from_drive_less.collection)
+    #sync.sync_music_from_temp_to_USB(usb_music.file_path, temp_music)
 
     # We can pickle the IOREG stuff because its serial no. is invariant,
     # But we can't be sure that its mount point in df will be the same.
