@@ -89,9 +89,10 @@ class ArtistItem(CollectionItem):
 
 class AlbumItem(CollectionItem):
 
-    def __init__(self, name, file_size):
+    def __init__(self, name, file_size, drive_file=None):
         super(AlbumItem, self).__init__(name, self)
         self.file_size = file_size
+        self.drive_file = drive_file
 
     def __str__(self):
         return self.name

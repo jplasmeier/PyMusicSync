@@ -17,6 +17,7 @@ def main():
     # Drive Setup
     gauth = gdrive.login()
     drive = GoogleDrive(gauth)
+    # TODO: Pull this out and into a config file
     folder_name = 'Music'
     music_folder = gdrive.get_folder_from_root(drive, folder_name)
 
@@ -60,7 +61,7 @@ def main():
     # Get albums to sync. Need artists too.
     gdrive_collection = sync.get_gdrive_artists_from_collection(drive, music_folder, missing_from_usb_less.collection)
     # gdrive_collection is a dict of artist_name: [drive_album]
-    gdrive_sync_size = sync.get_size_of_syncing_collection(drive, gdrive_collection)
+    gdrive_sync_size = sync.get_size_of_syncing_collection(gdrive_collection, google_drive_library.collection)
     print 'Size of GDrive files to be added (mb): ', gdrive_sync_size
     # watch out that size is hard coded against the df call - can return different things
     free_space_usb = int(df_device.avail)/1024.0
@@ -78,11 +79,7 @@ def main():
 
 
     print 'Upload to Drive'
-    for artist_name in missing_from_drive_less.collection:
-        artist_path = os.path.join(usb_music.file_path, artist_name)
-        for album_item in missing_from_drive_less.collection[artist_name].albums:
-            album_path = os.path.join(artist_path, album_item.name)
-            gdrive.upload_album(drive, artist_name, album_path, album_item.name)
+    sync.upload_collection_to_gdrive(drive, missing_from_drive_less.collection, usb_music.file_path)
 
     # We can pickle the IOREG stuff because its serial no. is invariant,
     # But we can't be sure that its mount point in df will be the same.

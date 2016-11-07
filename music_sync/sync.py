@@ -30,17 +30,16 @@ def get_free_space_on_local():
             return int(tokens[3])/1024
 
 
-def get_size_of_syncing_collection(drive, gdrive_collection):
-    collection_cache = cannery.get_cached_independent_drive_collection()
-    print 'Out of curiosity, the collection cache looks like: ', collection_cache
+def get_size_of_syncing_collection(sync_collection, drive_collection):
+    """
+    Gets the size of the files to be sync'd.
+    :param sync_collection: The albums to sync.
+    :param drive_collection: The whole Google Drive collection
+    :return:
+    """
     gdrive_sync_size = 0
-    for gdrive_artist in gdrive_collection:
-        if gdrive_artist in collection_cache:
-            print 'Found artist {0} in cache!'.format(gdrive_artist)
-            gdrive_sync_size += collection_cache[gdrive_artist].get_file_size_of_albums()
-        else:
-            print 'Artist {0} not in cache.'.format(gdrive_artist)
-            gdrive_sync_size += gdrive.get_artist_size(drive, gdrive_artist['id'])
+    for gdrive_artist in sync_collection:
+        gdrive_sync_size += drive_collection[gdrive_artist].get_file_size_of_albums()
 
     gdrive_sync_size = gdrive_sync_size / 1024.0 / 1024.0
     return gdrive_sync_size
@@ -268,7 +267,6 @@ def bin_folder(path):
     char_index = OrderedDict()
     rev_char_index = OrderedDict()
 
-
     sub_dirs = sorted(sub_dirs)
     incoming_char = sub_dirs[0][0]
     for idx, artist in enumerate(sub_dirs):
@@ -302,3 +300,10 @@ def bin_folder(path):
 
     # Trim any tins bins (less than half spec size)
     remove_extra_bins(bins, bin_size/2)
+
+def upload_collection_to_gdrive(drive, collection, usb_path):
+    for artist_name in collection:
+        artist_path = os.path.join(usb_path, artist_name)
+        for album_item in collection[artist_name].albums:
+            album_path = os.path.join(artist_path, album_item.name)
+            gdrive.upload_album(drive, artist_name, album_path, album_item.name)

@@ -9,6 +9,9 @@ raw_metadata_albums_path = 'raw_metadata_albums.p'
 
 
 class DriveArtistItem(music_sync_utils.ArtistItem):
+    def __init__(self, name, drive_file):
+        super(DriveArtistItem, self).__init__(name)
+        self.drive_file = drive_file
 
     def get_albums_for_artist(self, drive, drive_artist):
         """
@@ -24,7 +27,7 @@ class DriveArtistItem(music_sync_utils.ArtistItem):
             drive_album_name = drive_album['title']
             if drive_album_name not in self.albums and get_file_ext_type(drive_album) is 'folder':
                 album_size = get_album_size_drive(drive, drive_album['id'])
-                new_album = music_sync_utils.AlbumItem(drive_album_name, album_size)
+                new_album = music_sync_utils.AlbumItem(drive_album_name, album_size, drive_album)
                 self.albums.append(new_album)
                 drive_albums_added.append(drive_album)
             elif get_file_ext_type(drive_album) is 'audio':
@@ -58,7 +61,7 @@ def get_google_drive_collection(drive, folder):
             raw_metadata_albums[drive_artist_name] = []
         # Artist not in collection yet
         if drive_artist_name not in filled_collection:
-            new_artist = DriveArtistItem(drive_artist_name)
+            new_artist = DriveArtistItem(drive_artist_name, drive_artist)
             drive_albums = new_artist.get_albums_for_artist(drive, drive_artist)
             raw_metadata_albums[drive_artist_name] = drive_albums
             filled_collection[drive_artist_name] = new_artist
