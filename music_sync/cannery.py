@@ -35,13 +35,13 @@ def load_something(filepath):
 
 def pickle_drive_library(library, folder):
     cached_library = get_cached_drive_library(folder)
-    if cached_library is not None and cached_library.etag != library.etag:
+    if cached_library is not None:
         print "Saving library changes to cache"
         return pickle_something(library, drive_library_cache_path)
     elif cached_library is None:
         pickle_something(library, drive_library_cache_path)
     else:
-        print "Nothing to update in cache."
+        print "Nothing to update or commit to in cache."
         return
 
 

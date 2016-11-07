@@ -6,6 +6,7 @@ import gdrive
 import music_sync_utils
 import sync
 import sys
+import os
 reload(sys)
 sys.setdefaultencoding('utf8')
 
@@ -65,25 +66,23 @@ def main():
     free_space_usb = int(df_device.avail)/1024.0
     print "Free space on USB (mb)", free_space_usb
     if free_space_usb < gdrive_sync_size:
-        print "Not enough space on USB Device. Exiting..."
-        sys.exit(0)
+        print "Not enough space on USB Device. Skipping..."
     free_space_pc = sync.get_free_space_on_local()
     print "Free space on PC  (mb)", free_space_pc
-    if free_space_pc < gdrive_sync_size:
-        sync.buffered_sync_gdrive_to_usb(drive, gdrive_collection, usb_music.file_path)
-        print "Not enough space on laptop. Exiting..."
-        sys.exit(0)
+    if free_space_pc < gdrive_sync_size and free_space_usb > gdrive_sync_size:
+        try:
+            sync.buffered_sync_gdrive_to_usb(drive, gdrive_collection, usb_music.file_path)
+        except:
+            sync.delete_folder()
+        print "Not enough space on laptop. Skipping..."
 
-    # Download from Drive to USB
-    #temp_music = '/Users/jgp/Dropbox/ProgrammingProjects/PyMusicSync/music_sync/temp_music/'
-    print 'Buffered Sync'
-    try:
-        sync.buffered_sync_gdrive_to_usb(drive, gdrive_collection, usb_music.file_path)
-    except:
-        sync.delete_folder()
 
-    #temp_music = sync.download_gdrive_locally(drive, music_folder, missing_from_drive_less.collection)
-    #sync.sync_music_from_temp_to_USB(usb_music.file_path, temp_music)
+    print 'Upload to Drive'
+    for artist_name in missing_from_drive_less.collection:
+        artist_path = os.path.join(usb_music.file_path, artist_name)
+        for album_item in missing_from_drive_less.collection[artist_name].albums:
+            album_path = os.path.join(artist_path, album_item.name)
+            gdrive.upload_album(drive, artist_name, album_path, album_item.name)
 
     # We can pickle the IOREG stuff because its serial no. is invariant,
     # But we can't be sure that its mount point in df will be the same.

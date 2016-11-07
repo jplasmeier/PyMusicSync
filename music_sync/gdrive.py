@@ -1,6 +1,7 @@
 # Google Drive functionality 
 from pydrive.auth import GoogleAuth
 import cannery
+import os
 import music_sync_utils
 
 raw_metadata_artists_path = 'raw_metadata_artists.p'
@@ -180,3 +181,60 @@ def get_album_size_drive(drive, album_id):
     return size
 
 
+# Upload
+
+
+def upload_album(drive, artist_name, album_path, album_name):
+    """
+    Upload an album to Google Drive.
+    :param drive
+    :param artist_name
+    :param album_path
+    :param album_name
+    """
+    # Using the artist name see if it exists in the cache (on GDrive)
+    # If it does, create a folder under it, and upload tracks from album_path
+    # Else, Create a folder for the artist name. Then create the album under it and add the tracks
+    artist_cache = cannery.load_something(raw_metadata_artists_path)
+    if artist_name in artist_cache:
+        print '{} in cache'.format(artist_name)
+        drive_artist = artist_cache[artist_name]
+    else:
+
+        # we need the root folder of artists for this
+        music_folder = get_folder_from_root(drive, 'Music')
+        drive_artist = create_folder(drive, artist_name, music_folder['id'])
+        print 'created folder for {}'.format(drive_artist['title'])
+    print "Uploading Album: {0} to Artist: {1}".format(album_path, artist_name)
+
+    # We now have an Artist Folder, now upload an album folder.
+    drive_album = create_folder(drive, album_name, drive_artist['id'])
+
+    # Now create tracks under the folder
+    for track_file_name in os.listdir(album_path):
+        print "Uploading file: ", track_file_name
+        track_path = os.path.join(album_path, track_file_name)
+        if os.path.isdir(track_path):
+            sub_dir = create_folder(drive, track_file_name, drive_album['id'])
+            for sub_track in os.listdir(track_path):
+                if not os.path.isdir(sub_track):
+                    print "Uploading sub file: ", sub_track
+
+                    sub_track_path = os.path.join(track_path, sub_track)
+                    track = drive.CreateFile({'title': sub_track, 'parents': [{'id': sub_dir['id']}]})
+                    track.SetContentFile(sub_track_path)
+                    track.Upload()
+        else:
+            track = drive.CreateFile({'title': track_file_name, 'parents': [{'id': drive_album['id']}]})
+            track.SetContentFile(track_path)
+            track.Upload()
+
+    return drive_album
+
+
+def create_folder(drive, folder_name, parent_id):
+    drive_folder = drive.CreateFile({'title': folder_name,
+                              "parents": [{"id": parent_id}],
+                              "mimeType": "application/vnd.google-apps.folder"})
+    drive_folder.Upload()
+    return drive_folder
