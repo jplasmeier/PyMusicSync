@@ -41,6 +41,27 @@ class MusicLibrary(object):
                 s.append("---- Album: {}\n".format(album_item.name))
         return str(s)
 
+    def subtract_collection_elements(self, library_b):
+        """
+        Subtract B from A by set subtraction on collection objects
+        :param collection_a:
+        :param collection_b:
+        :return: Dict of elements a of A such that a not in B.
+        """
+        result_library = MusicLibrary('result')
+        for artist_name in self.collection:
+            # Add artist to result set
+            if artist_name not in library_b.collection:
+                result_library.collection[artist_name] = self.collection[artist_name]
+            else:
+                for album in self.collection[artist_name].albums:
+                    if album not in library_b.collection[artist_name].albums:
+                        if artist_name not in result_library.collection:
+                            result_library.collection[artist_name] = ArtistItem(artist_name,
+                                                                                self.collection[artist_name].etag)
+                        result_library.collection[artist_name].albums.append(album)
+        return result_library
+
 
 class USBLibrary(MusicLibrary):
     """
@@ -99,25 +120,7 @@ class AlbumItem(CollectionItem):
 
 
 # (A - B)
-def subtract_collection_elements(library_a, library_b):
-    """
-    Subtract B from A by set subtraction on collection objects
-    :param collection_a:
-    :param collection_b:
-    :return: Dict of elements a of A such that a not in B.
-    """
-    result_library = MusicLibrary('result')
-    for artist_name in library_a.collection:
-        # Add artist to result set
-        if artist_name not in library_b.collection:
-            result_library.collection[artist_name] = library_a.collection[artist_name]
-        else:
-            for album in library_a.collection[artist_name].albums:
-                if album not in library_b.collection[artist_name].albums:
-                    if artist_name not in result_library.collection:
-                        result_library.collection[artist_name] = ArtistItem(artist_name, library_a.collection[artist_name].etag)
-                    result_library.collection[artist_name].albums.append(album)
-    return result_library
+
 
 
 def check_drive_not_in_usb_collection(drive_collection, usb_collection):

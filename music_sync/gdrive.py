@@ -3,9 +3,45 @@ from pydrive.auth import GoogleAuth
 import cannery
 import os
 import music_sync_utils
+import codecs
+import copy
 
 raw_metadata_artists_path = 'raw_metadata_artists.p'
 raw_metadata_albums_path = 'raw_metadata_albums.p'
+
+
+class DriveLibrary(music_sync_utils.MusicLibrary):
+    def subtract_collection_elements(self, library_b):
+        """
+        Subtract B from A by set subtraction on collection objects
+        :param collection_a:
+        :param collection_b:
+        :return: Dict of elements a of A such that a not in B.
+        """
+        result_library = DriveLibrary('result')
+        for artist_name in self.collection:
+            # Add artist to result set
+            if artist_name not in library_b.collection:
+                result_library.collection[artist_name] = self.collection[artist_name]
+            else:
+                for album in self.collection[artist_name].albums:
+                    if album not in library_b.collection[artist_name].albums:
+                        if artist_name not in result_library.collection:
+                            result_library.collection[artist_name] = DriveArtistItem(artist_name,
+                                                                                     self.collection[artist_name].drive_file)
+                        result_library.collection[artist_name].albums.append(album)
+        return result_library
+
+    def clean_unicode(self):
+        clean_collection = {}
+        for artist_name in self.collection:
+            clean_artist_name = codecs.utf_8_decode(artist_name.encode('utf-8'))[0]
+            clean_collection[clean_artist_name] = copy.deepcopy(self.collection[artist_name])
+            clean_collection[clean_artist_name].albums = []
+            for album in self.collection[artist_name].albums:
+                clean_album_name = codecs.utf_8_decode(album.name.encode('utf-8'))[0]
+                clean_collection[clean_artist_name].albums.append(DriveAlbumItem(clean_album_name, album.file_size, album.drive_file))
+        return clean_collection
 
 
 class DriveArtistItem(music_sync_utils.ArtistItem):
@@ -27,7 +63,7 @@ class DriveArtistItem(music_sync_utils.ArtistItem):
             drive_album_name = drive_album['title']
             if drive_album_name not in self.albums and get_file_ext_type(drive_album) is 'folder':
                 album_size = get_album_size_drive(drive, drive_album['id'])
-                new_album = music_sync_utils.AlbumItem(drive_album_name, album_size, drive_album)
+                new_album = DriveAlbumItem(drive_album_name, album_size, drive_album)
                 self.albums.append(new_album)
                 drive_albums_added.append(drive_album)
             elif get_file_ext_type(drive_album) is 'audio':
@@ -37,7 +73,13 @@ class DriveArtistItem(music_sync_utils.ArtistItem):
         return drive_albums_added
 
 
+class DriveAlbumItem(music_sync_utils.AlbumItem):
+    def __init__(self, name, file_size, drive_file):
+        super(DriveAlbumItem, self).__init__(name, file_size)
+        self.drive_file = drive_file
+
 # Collection Filling
+
 
 # This needs to be a bound method in a Google Drive subclass of the CollectionItem.
 def get_google_drive_collection(drive, folder):
