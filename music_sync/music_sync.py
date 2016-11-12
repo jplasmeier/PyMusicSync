@@ -21,6 +21,7 @@ def main():
     google_drive_library = music_sync_utils.MusicLibrary(music_folder.metadata['etag'])
 
     google_drive_library.collection = gdrive.get_google_drive_collection(drive, music_folder)
+    # TODO: This is weird looking...
     google_drive_library.collection = google_drive_library.clean_unicode()
 
     print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_library.get_collection_size()/1024/1024, google_drive_library.get_collection_size()/1000/1000/1000))

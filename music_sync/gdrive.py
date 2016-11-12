@@ -29,6 +29,7 @@ class DriveArtistItem(music_sync_utils.ArtistItem):
             elif get_file_ext_type(drive_album) is 'audio':
                 audio_in_artist.append(drive_album_name)
         if audio_in_artist:
+            # TODO: This is being overshadowed by the stream of artists and albums coming in.
             print "Heads up, you have some audio files directly under an artist: ", audio_in_artist
         return drive_albums_added
 
@@ -41,31 +42,21 @@ class DriveAlbumItem(music_sync_utils.AlbumItem):
 # Collection Filling
 
 
-# This needs to be a bound method in a Google Drive subclass of the CollectionItem.
+# TODO: This needs to be a bound method in a Google Drive subclass of the CollectionItem.
 def get_google_drive_collection(drive, folder):
     """
     :param drive: the GoogleDrive object to pull metadata from Google Drive
     :param folder: the name of the folder to pull metadata from. Currently must be in the root folder
     """
-
-    # These are currently being dumped to disk
-    # But they aren't useful after execution so should keep them in memory
-    raw_metadata_artists = {}
-    raw_metadata_albums = {}
-
     filled_collection = {}
     drive_artists = list_folder(drive, folder['id'])
 
     for drive_artist in drive_artists:
         drive_artist_name = drive_artist['title']
-        raw_metadata_artists[drive_artist_name] = drive_artist
-        if drive_artist_name not in raw_metadata_albums:
-            raw_metadata_albums[drive_artist_name] = []
         # Artist not in collection yet
         if drive_artist_name not in filled_collection:
             new_artist = DriveArtistItem(drive_artist_name, drive_artist)
             drive_albums = new_artist.get_albums_for_artist(drive, drive_artist)
-            raw_metadata_albums[drive_artist_name] = drive_albums
             filled_collection[drive_artist_name] = new_artist
             print "Added Artist: {}".format(drive_artist_name)
             for drive_album in drive_albums:
@@ -181,6 +172,35 @@ def get_album_size_drive(drive, album_id):
         if file_size is not None:
             size += file_size
     return size
+
+
+# Download
+
+def download_recursive(drive, folder, download_to):
+    """
+    Given a Drive folder, recursively download that folder and it's children
+    :param drive: The drive object
+    :param folder: The folder to download
+    :param download_to: The path to download to
+    :return: None
+    """
+    children = list_folder(drive, folder)
+    if children is None:
+        return
+    for child in children:
+        file_type = get_file_ext_type(child)
+        if file_type is 'folder':
+            download_recursive(drive, child, download_to)
+        elif file_type is 'audio':
+            download_file(child, download_to)
+    return
+
+
+def download_file(child, download_to):
+    download_path = os.path.join(download_to, child['title'])
+    print 'Downloading file {0} to: {1}'.format(child['title'], download_path)
+    child.GetContentFile(download_path)
+    return
 
 
 # Upload

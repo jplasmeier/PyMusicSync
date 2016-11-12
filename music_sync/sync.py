@@ -80,19 +80,20 @@ def delete_folder(folder=None):
 
 def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collection):
     """`
-    Laptop doesn't have enough space to store all of the music that needs to go from Drive to USB
+    Local machine doesn't have enough space to store all of the music that needs to go from Drive to USB.
+    Also can't download directly to USB for some reason.
     So we need to sync some stuff then delete it.
     :param drive:
-    :param gdrive_collection: the return from get_gdrive_artist TBH (artist_name: list of gdrive albums
-    :param usb_file_path:
-    :return:
+    :param sync_collection: artist_name: list of drive_albums
+    :param usb_path: the path to the root of the USB device
+    :param drive_collection: the whole collection of artist_name: ArtistItem objects
+    :return: None.
     """
     # Get the size of the next album? artist? to download
     # Get size of local
     # If there's enough space, sync
     # Else, Rsync buffer to USB
 
-    # Collection is artist ->
     print 'Syncing collection: ', sync_collection
     print 'To USB Path: ', usb_path
     artist_queue = deque()

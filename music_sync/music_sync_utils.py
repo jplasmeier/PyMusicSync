@@ -61,21 +61,18 @@ class MusicLibrary(object):
         :return: Dict of elements a of A such that a not in B.
         """
         result_library = MusicLibrary('result')
-        print 'collection', self.collection
         for artist_name in self.collection:
-            print 'artist name', artist_name
             # Add artist to result set
             if artist_name not in library_b.collection:
                 result_library.collection[artist_name] = copy.deepcopy(self.collection[artist_name])
             else:
                 for album in self.collection[artist_name].albums:
-                    print 'hey what the hell', album
                     if album not in library_b.collection[artist_name].albums:
                         if artist_name not in result_library.collection:
-                            print 'artist not in result yet:  ', artist_name
                             result_library.collection[artist_name] = copy.deepcopy(self.collection[artist_name])
                         result_library.collection[artist_name].albums.append(album)
         return result_library
+
 
 class USBLibrary(MusicLibrary):
     """
