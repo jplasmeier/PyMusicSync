@@ -3,7 +3,6 @@ import gdrive
 import os
 import sys
 import subprocess
-import cannery
 from subprocess import check_output, CalledProcessError
 from collections import deque, OrderedDict
 

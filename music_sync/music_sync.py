@@ -1,7 +1,6 @@
 # -*- coding: utf-8 --
 from pydrive.drive import GoogleDrive
 import usb
-import cannery
 import gdrive
 import music_sync_utils
 import sync
@@ -9,8 +8,6 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-# IOREG device info pickle file
-ioreg_file = "ioreg_file.p"
 
 def main():
     # Drive Setup
@@ -28,16 +25,10 @@ def main():
 
     print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_library.get_collection_size()/1024/1024, google_drive_library.get_collection_size()/1000/1000/1000))
 
-    cannery.pickle_drive_library(google_drive_library, music_folder)
-
     # USB Setup Stuff
-    ioreg_device = cannery.load_ioreg(ioreg_file)
-    if not ioreg_device:
-        ioreg_device = usb.pick_from_ioreg()
     df_device = usb.pick_from_df()
 
     # These two print statements should probably go elsewhere/nowhere
-    print "You picked this device from IOREG: {}".format(ioreg_device)
     print "You picked this device from DF: {}".format(df_device)
 
     # Create, fill, and clean USBCollection
@@ -71,11 +62,6 @@ def main():
 
     print 'Upload to Drive'
     sync.upload_collection_to_gdrive(drive, missing_from_drive_less.collection, usb_music.file_path)
-
-    # We can pickle the IOREG stuff because its serial no. is invariant,
-    # But we can't be sure that its mount point in df will be the same.
-    # Need to research if there's a (reliable) link between df and IOREG
-    cannery.pickle_ioreg(ioreg_device, ioreg_file)
 
 if __name__ == '__main__':
     main() 
