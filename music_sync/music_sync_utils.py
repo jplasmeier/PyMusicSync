@@ -41,27 +41,41 @@ class MusicLibrary(object):
                 s.append("---- Album: {}\n".format(album_item.name))
         return str(s)
 
-    def subtract_collection_elements(self, library_b):
+    def clean_unicode(self):
+        clean_collection = {}
+        for artist_name in self.collection:
+            clean_artist_name = codecs.utf_8_decode(artist_name.encode('utf-8'))[0]
+            clean_collection[clean_artist_name] = copy.deepcopy(self.collection[artist_name])
+            clean_collection[clean_artist_name].albums = []
+            for album in self.collection[artist_name].albums:
+                clean_album_name = codecs.utf_8_decode(album.name.encode('utf-8'))[0]
+                clean_album = copy.deepcopy(album)
+                clean_album.name = clean_album_name
+                clean_collection[clean_artist_name].albums.append(clean_album)
+        return clean_collection
+
+    def get_subtracted_collection_elements(self, library_b):
         """
-        Subtract B from A by set subtraction on collection objects
-        :param collection_a:
-        :param collection_b:
+        RETURN Subtract B from A by set subtraction on collection objects.
+        :param library_b: the collection to subtract from this object
         :return: Dict of elements a of A such that a not in B.
         """
         result_library = MusicLibrary('result')
+        print 'collection', self.collection
         for artist_name in self.collection:
+            print 'artist name', artist_name
             # Add artist to result set
             if artist_name not in library_b.collection:
-                result_library.collection[artist_name] = self.collection[artist_name]
+                result_library.collection[artist_name] = copy.deepcopy(self.collection[artist_name])
             else:
                 for album in self.collection[artist_name].albums:
+                    print 'hey what the hell', album
                     if album not in library_b.collection[artist_name].albums:
                         if artist_name not in result_library.collection:
-                            result_library.collection[artist_name] = ArtistItem(artist_name,
-                                                                                self.collection[artist_name].etag)
+                            print 'artist not in result yet:  ', artist_name
+                            result_library.collection[artist_name] = copy.deepcopy(self.collection[artist_name])
                         result_library.collection[artist_name].albums.append(album)
         return result_library
-
 
 class USBLibrary(MusicLibrary):
     """
@@ -178,6 +192,9 @@ def find_duplicate_albums(missing_from_usb, missing_from_drive):
     """
     If there are artists/albums in both libraries, then we have found a false positive.
     These can occur due to unicode issues.
+    This is a bad way of doing this and there are often false positives.
+    We can also deal with false negatives downstream by virtue of using rsync.
+    Still, we would rather avoid the extra album download, so this should still be implemented, just better.
     :param missing_from_usb: A library of artists with albums that are missing from USB
     :param missing_from_drive: A library of artists with albums that are missing from Drive
     :return: A tuple of two libraries, one for each of the actual libraries, containing the actually missing artists.

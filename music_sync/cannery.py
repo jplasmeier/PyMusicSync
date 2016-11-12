@@ -66,22 +66,6 @@ def get_cached_drive_library(folder):
         return
 
 
-def get_cached_drive_collection(gdrive_folder=None):
-    """
-    For some reason this function takes an optional Google Drive folder
-    :param folder:
-    :return:
-    """
-    if gdrive_folder is not None:
-        drive_library = get_cached_drive_library(gdrive_folder)
-    else:
-        drive_library = get_cached_independent_drive_collection()
-    if drive_library is not None:
-        return drive_library.collection
-    else:
-        return {}
-
-
 def get_cached_independent_drive_collection():
     library = load_drive_library()
     if library is not None:

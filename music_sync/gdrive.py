@@ -1,47 +1,7 @@
 # Google Drive functionality 
 from pydrive.auth import GoogleAuth
-import cannery
 import os
 import music_sync_utils
-import codecs
-import copy
-
-raw_metadata_artists_path = 'raw_metadata_artists.p'
-raw_metadata_albums_path = 'raw_metadata_albums.p'
-
-
-class DriveLibrary(music_sync_utils.MusicLibrary):
-    def subtract_collection_elements(self, library_b):
-        """
-        Subtract B from A by set subtraction on collection objects
-        :param collection_a:
-        :param collection_b:
-        :return: Dict of elements a of A such that a not in B.
-        """
-        result_library = DriveLibrary('result')
-        for artist_name in self.collection:
-            # Add artist to result set
-            if artist_name not in library_b.collection:
-                result_library.collection[artist_name] = self.collection[artist_name]
-            else:
-                for album in self.collection[artist_name].albums:
-                    if album not in library_b.collection[artist_name].albums:
-                        if artist_name not in result_library.collection:
-                            result_library.collection[artist_name] = DriveArtistItem(artist_name,
-                                                                                     self.collection[artist_name].drive_file)
-                        result_library.collection[artist_name].albums.append(album)
-        return result_library
-
-    def clean_unicode(self):
-        clean_collection = {}
-        for artist_name in self.collection:
-            clean_artist_name = codecs.utf_8_decode(artist_name.encode('utf-8'))[0]
-            clean_collection[clean_artist_name] = copy.deepcopy(self.collection[artist_name])
-            clean_collection[clean_artist_name].albums = []
-            for album in self.collection[artist_name].albums:
-                clean_album_name = codecs.utf_8_decode(album.name.encode('utf-8'))[0]
-                clean_collection[clean_artist_name].albums.append(DriveAlbumItem(clean_album_name, album.file_size, album.drive_file))
-        return clean_collection
 
 
 class DriveArtistItem(music_sync_utils.ArtistItem):
@@ -111,8 +71,6 @@ def get_google_drive_collection(drive, folder):
             for drive_album in drive_albums:
                 print "----Added Album: {}".format(drive_album['title'])
 
-    cannery.pickle_something(raw_metadata_artists, raw_metadata_artists_path)
-    cannery.pickle_something(raw_metadata_albums, raw_metadata_albums_path)
     return filled_collection
 
 
@@ -159,7 +117,6 @@ def get_file_from_root(drive, file_title):
     return title_matches
 
 
-# TODO: Fix this hacky code
 def get_folder_from_root(drive, file_title):
     """
     Returns the file/directory as a GoogleDriveFile with the given title.
@@ -229,7 +186,7 @@ def get_album_size_drive(drive, album_id):
 # Upload
 
 
-def upload_album(drive, artist_name, album_path, album_name):
+def upload_album(drive, artist_name, album_path, album_name, collection):
     """
     Upload an album to Google Drive.
     :param drive
@@ -240,16 +197,12 @@ def upload_album(drive, artist_name, album_path, album_name):
     # Using the artist name see if it exists in the cache (on GDrive)
     # If it does, create a folder under it, and upload tracks from album_path
     # Else, Create a folder for the artist name. Then create the album under it and add the tracks
-    artist_cache = cannery.load_something(raw_metadata_artists_path)
-    if artist_name in artist_cache:
-        print '{} in cache'.format(artist_name)
-        drive_artist = artist_cache[artist_name]
+    if artist_name in collection:
+        drive_artist = collection[artist_name]
     else:
-
         # we need the root folder of artists for this
         music_folder = get_folder_from_root(drive, 'Music')
         drive_artist = create_folder(drive, artist_name, music_folder['id'])
-        print 'created folder for {}'.format(drive_artist['title'])
     print "Uploading Album: {0} to Artist: {1}".format(album_path, artist_name)
 
     # We now have an Artist Folder, now upload an album folder.
@@ -264,7 +217,6 @@ def upload_album(drive, artist_name, album_path, album_name):
             for sub_track in os.listdir(track_path):
                 if not os.path.isdir(sub_track):
                     print "Uploading sub file: ", sub_track
-
                     sub_track_path = os.path.join(track_path, sub_track)
                     track = drive.CreateFile({'title': sub_track, 'parents': [{'id': sub_dir['id']}]})
                     track.SetContentFile(sub_track_path)
@@ -273,13 +225,12 @@ def upload_album(drive, artist_name, album_path, album_name):
             track = drive.CreateFile({'title': track_file_name, 'parents': [{'id': drive_album['id']}]})
             track.SetContentFile(track_path)
             track.Upload()
-
     return drive_album
 
 
 def create_folder(drive, folder_name, parent_id):
     drive_folder = drive.CreateFile({'title': folder_name,
-                              "parents": [{"id": parent_id}],
-                              "mimeType": "application/vnd.google-apps.folder"})
+                                    "parents": [{"id": parent_id}],
+                                     "mimeType": "application/vnd.google-apps.folder"})
     drive_folder.Upload()
     return drive_folder

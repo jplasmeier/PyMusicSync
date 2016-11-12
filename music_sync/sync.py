@@ -7,8 +7,6 @@ import cannery
 from subprocess import check_output, CalledProcessError
 from collections import deque, OrderedDict
 
-raw_metadata_artists_path = 'raw_metadata_artists.p'
-raw_metadata_albums_path = 'raw_metadata_albums.p'
 
 MYDIR = os.path.dirname(__file__)
 boot_disc_path = '/dev/disk1'
@@ -57,8 +55,6 @@ def get_gdrive_artists_from_collection(sync_collection, drive_collection):
     gdrive_artists = {}
     for artist_name in sync_collection:
         # find the folder with this name
-        print 'Artist {0} in Google Drive: {1}'.format(artist_name, drive_collection[artist_name])
-        print 'albs: ', [a.name for a in drive_collection[artist_name].albums]
         gdrive_artists[artist_name] = [a.drive_file for a in drive_collection[artist_name].albums]
     return gdrive_artists
 
@@ -84,7 +80,7 @@ def delete_folder(folder=None):
 
 
 def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collection):
-    """
+    """`
     Laptop doesn't have enough space to store all of the music that needs to go from Drive to USB
     So we need to sync some stuff then delete it.
     :param drive:
@@ -102,7 +98,6 @@ def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collecti
     print 'To USB Path: ', usb_path
     artist_queue = deque()
     artist_queue.extend(sync_collection.keys())
-    collection_cache = cannery.get_cached_independent_drive_collection()
     temp_music_dir = os.path.join(MYDIR, 'temp_music')
     if not os.path.isdir(temp_music_dir):
         os.mkdir(temp_music_dir)
@@ -116,13 +111,7 @@ def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collecti
         if not os.path.isdir(new_dir_artist):
             os.mkdir(new_dir_artist)
         space_on_local = get_free_space_on_local()
-        if artist_name in collection_cache:
-            artist_size = collection_cache[artist_name].get_file_size_of_albums()/1024/1024
-        else:
-            # WTF? should probably throw an exception
-            print "THIS SHOULD BE AN EXCEPTION HOLY SHIT WAT ARE YOU DOING"
-            # Do it the shitty way
-            artist_size = 9999999999999
+        artist_size = drive_collection[artist_name].get_file_size_of_albums()/1024/1024
         print 'Artist {0} is size {1}.'.format(artist_name, artist_size)
         print 'We have {0} mb left on local machine.'.format(space_on_local)
         if artist_size < space_on_local:

@@ -9,10 +9,6 @@ import pprint
 import sys
 import music_sync_utils
 
-# TODO: Refactor globals
-df_info = {}
-device_info = {}
-
 
 class DFDevice:
     """
@@ -49,23 +45,8 @@ class DFDevice:
     def get_free_space(self):
         return self.avail
 
-
-class USB_Device:
-    """
-    Class to keep track of USB device information.
-    Might not need this........?
-    The reason we had this originally was to be able to save devices
-    But since we can't tie DF and IOREG together, what's the point? most likely we will just pick each time.
-    But for caching, we want to give a unique ID for each player. Use IOREG sn + getmtime for custom etag?
-    """
-    
-    def __init__(self, nickname):
-        self.IOReg_info = {}
-        self.DF_info = {}
-        self.nickname = nickname
-
-    def get_free_space(self):
-        return self.DF_info['Avail']
+    def __str__(self):
+        return self.mounted_on
 
 
 # check_output calls
