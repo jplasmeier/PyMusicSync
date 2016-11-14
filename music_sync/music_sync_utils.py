@@ -70,6 +70,7 @@ class MusicLibrary(object):
                     if album not in library_b.collection[artist_name].albums:
                         if artist_name not in result_library.collection:
                             result_library.collection[artist_name] = copy.deepcopy(self.collection[artist_name])
+                            result_library.collection[artist_name].albums = []
                         result_library.collection[artist_name].albums.append(album)
         return result_library
 

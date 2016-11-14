@@ -1,6 +1,6 @@
-# Google Drive functionality 
 from pydrive.auth import GoogleAuth
 import os
+import sys
 import music_sync_utils
 
 
@@ -29,8 +29,8 @@ class DriveArtistItem(music_sync_utils.ArtistItem):
             elif get_file_ext_type(drive_album) is 'audio':
                 audio_in_artist.append(drive_album_name)
         if audio_in_artist:
-            # TODO: This is being overshadowed by the stream of artists and albums coming in.
-            print "Heads up, you have some audio files directly under an artist: ", audio_in_artist
+            for audio in audio_in_artist:
+                print "\rHeads up, you have some audio files directly under an artist: {}".format(audio)
         return drive_albums_added
 
 
@@ -50,18 +50,18 @@ def get_google_drive_collection(drive, folder):
     """
     filled_collection = {}
     drive_artists = list_folder(drive, folder['id'])
+    len_drive_artists = len(drive_artists)
 
-    for drive_artist in drive_artists:
+    for idx, drive_artist in enumerate(drive_artists):
         drive_artist_name = drive_artist['title']
         # Artist not in collection yet
         if drive_artist_name not in filled_collection:
             new_artist = DriveArtistItem(drive_artist_name, drive_artist)
-            drive_albums = new_artist.get_albums_for_artist(drive, drive_artist)
+            new_artist.get_albums_for_artist(drive, drive_artist)
             filled_collection[drive_artist_name] = new_artist
-            print "Added Artist: {}".format(drive_artist_name)
-            for drive_album in drive_albums:
-                print "----Added Album: {}".format(drive_album['title'])
-
+            # This will update the same line with the new percentage.
+            sys.stdout.write("\rDownloading Google Drive Metadata: {}".format(idx / float(len_drive_artists) * 100))
+            sys.stdout.flush()
     return filled_collection
 
 
@@ -184,13 +184,16 @@ def download_recursive(drive, folder, download_to):
     :param download_to: The path to download to
     :return: None
     """
-    children = list_folder(drive, folder)
+    children = list_folder(drive, folder['id'])
     if children is None:
         return
     for child in children:
         file_type = get_file_ext_type(child)
         if file_type is 'folder':
-            download_recursive(drive, child, download_to)
+            new_dir = os.path.join(download_to, child['title'])
+            if not os.path.isdir(new_dir):
+                os.mkdir(new_dir)
+            download_recursive(drive, child, new_dir)
         elif file_type is 'audio':
             download_file(child, download_to)
     return

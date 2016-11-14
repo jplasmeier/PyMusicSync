@@ -33,12 +33,12 @@ def main():
     print "You picked this device from DF: {}".format(df_device)
 
     # Create, fill, and clean USBCollection
-    usb_music = music_sync_utils.USBLibrary(df_device.mounted_on)
-    usb_music.collection = usb.get_usb_collection(usb_music.file_path)
-    usb_music.collection = music_sync_utils.clean_unicode(usb_music.collection)
+    usb_music_library = music_sync_utils.USBLibrary(df_device.mounted_on)
+    usb_music_library.collection = usb.get_usb_collection(usb_music_library.file_path)
+    usb_music_library.collection = music_sync_utils.clean_unicode(usb_music_library.collection)
 
-    missing_from_usb = google_drive_library.get_subtracted_collection_elements(usb_music)
-    missing_from_drive = usb_music.get_subtracted_collection_elements(google_drive_library)
+    missing_from_usb = google_drive_library.get_subtracted_collection_elements(usb_music_library)
+    missing_from_drive = usb_music_library.get_subtracted_collection_elements(google_drive_library)
 
     missing_from_drive_less = music_sync_utils.find_duplicate_albums(missing_from_usb, missing_from_drive)
 
@@ -47,10 +47,7 @@ def main():
     print "The following are missing from your Drive"
     music_sync_utils.print_collection(missing_from_drive_less.collection)
 
-    # Get albums to sync. Need artists too.
-    sync_to_usb_collection = sync.get_gdrive_artists_from_collection(missing_from_usb.collection, google_drive_library.collection)
-    # gdrive_collection is a dict of artist_name: [drive_album]
-    gdrive_sync_size = sync.get_size_of_syncing_collection(sync_to_usb_collection, google_drive_library.collection)
+    gdrive_sync_size = missing_from_usb.get_collection_size()
     print 'Size of GDrive files to be added (mb): ', gdrive_sync_size
     # watch out that size is hard coded against the df call - can return different things
     free_space_usb = int(df_device.avail)/1024.0
@@ -59,10 +56,10 @@ def main():
         print "Not enough space on USB Device. Skipping..."
     free_space_pc = sync.get_free_space_on_local()
     print "Free space on PC  (mb)", free_space_pc
-    sync.buffered_sync_gdrive_to_usb(drive, sync_to_usb_collection, usb_music.file_path, google_drive_library.collection)
+    sync.buffered_sync_gdrive_to_usb(drive, missing_from_usb.collection, usb_music_library.file_path, google_drive_library.collection)
 
     print 'Upload to Drive'
-    sync.upload_collection_to_gdrive(drive, missing_from_drive_less.collection, usb_music.file_path)
+    sync.upload_collection_to_gdrive(drive, missing_from_drive_less.collection, usb_music_library.file_path, google_drive_library.collection)
 
 if __name__ == '__main__':
     main() 

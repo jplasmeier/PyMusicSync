@@ -42,13 +42,12 @@ def get_size_of_syncing_collection(sync_collection, drive_collection):
     return gdrive_sync_size
 
 
+# TODO: Remove. Can just use sync_collection directly...
 def get_gdrive_artists_from_collection(sync_collection, drive_collection):
     """
-    This shit becomes gdrive_collection.
-    :param drive:
-    :param music_folder: The Drive folder you're music is in
-    :param sync_collection:
-    :param drive_collection:
+    This skips the ArtistItem and Album objects and returns a dict of artist_name: [drive_album] kvps.
+    :param sync_collection: The collection of things to sync of artist_name: ArtistItem kvps
+    :param drive_collection: The collection of artist_name: ArtistItem kvps.
     :return:
     """
     gdrive_artists = {}
@@ -70,7 +69,7 @@ def sync_artist_from_temp_to_usb_and_delete(artist_path, temp_music_artist_path)
     returncode2 = subprocess.call(["rm"] + delete_arguments)
     return
 
-
+# TODO: What the hell? Fix this crap
 def delete_folder(folder=None):
     if folder is None:
         folder = os.path.join(MYDIR, 'temp_music')
@@ -94,8 +93,7 @@ def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collecti
     # If there's enough space, sync
     # Else, Rsync buffer to USB
 
-    print 'Syncing collection: ', sync_collection
-    print 'To USB Path: ', usb_path
+    print 'Syncing collection to USB Path: ', usb_path
     artist_queue = deque()
     artist_queue.extend(sync_collection.keys())
     temp_music_dir = os.path.join(MYDIR, 'temp_music')
@@ -103,10 +101,9 @@ def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collecti
         os.mkdir(temp_music_dir)
 
     while artist_queue:
-
         artist_name = artist_queue.popleft()
-        artist_path = os.path.join(usb_path, artist_name)
-        print 'Syncing artist {0} to path {1}'.format(artist_name, artist_path)
+        usb_artist_path = os.path.join(usb_path, artist_name)
+        print 'Syncing artist {0} to path {1}'.format(artist_name, usb_artist_path)
         new_dir_artist = os.path.join(temp_music_dir, artist_name)
         if not os.path.isdir(new_dir_artist):
             os.mkdir(new_dir_artist)
@@ -115,28 +112,14 @@ def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collecti
         print 'Artist {0} is size {1}.'.format(artist_name, artist_size)
         print 'We have {0} mb left on local machine.'.format(space_on_local)
         if artist_size < space_on_local:
-            for album in sync_collection[artist_name]:
-                album_files = gdrive.list_folder(drive, album['id'])
-                new_dir_album = os.path.join(new_dir_artist, album['title'])
-                os.mkdir(new_dir_album)
-                for album_file in album_files:
-                    if gdrive.get_file_ext_type(album_file) != 'folder':
-                        track_path = os.path.join(new_dir_album, album_file['title'])
-                        print 'Downloading to: ', track_path
-                        album_file.GetContentFile(track_path)
-                    # album_file is a folder, probably CD1/CD2 kinda thing
-                    else:
-                        tracks = gdrive.list_folder(drive, album_file['id'])
-                        sub_folder_path = os.path.join(new_dir_album, album_file['title'])
-                        if not os.path.isdir(sub_folder_path):
-                            os.mkdir(sub_folder_path)
-                        for track in tracks:
-                            if gdrive.get_file_ext_type(track) != 'folder':
-                                track_path = os.path.join(sub_folder_path, track['title'])
-                                print 'Downloading to: ', track_path
-                                track.GetContentFile(track_path)
+            for album_item in sync_collection[artist_name].albums:
+                new_dir_album = os.path.join(new_dir_artist, album_item.name)
+                if not os.path.isdir(new_dir_album):
+                    os.mkdir(new_dir_album)
+                print "Going to recursively download album: {0} to path: {1}".format(album_item.name, new_dir_album)
+                gdrive.download_recursive(drive, album_item.drive_file, new_dir_album)
         # Artist downloaded to client machine, now sync
-        sync_artist_from_temp_to_usb_and_delete(artist_path, new_dir_artist)
+        sync_artist_from_temp_to_usb_and_delete(usb_artist_path, new_dir_artist)
 
     # delete temp music
     delete_folder(temp_music_dir)
@@ -198,8 +181,6 @@ def bin_folder(path):
     j = 0
     lagging_char = ''
     for i in range(0, num_bins-1):
-
-
         for char in char_index:
             target_end = incoming_bin_idx + bin_size
             print 'Bin {0}. Target folder idx is {1}. Checking char {2} w index {3}'.format(i, target_end, char, char_index[char])
@@ -216,9 +197,9 @@ def bin_folder(path):
     remove_extra_bins(bins, bin_size/2)
 
 
-def upload_collection_to_gdrive(drive, collection, usb_path):
-    for artist_name in collection:
+def upload_collection_to_gdrive(drive, sync_collection, usb_path, drive_collection):
+    for artist_name in sync_collection:
         artist_path = os.path.join(usb_path, artist_name)
-        for album_item in collection[artist_name].albums:
+        for album_item in sync_collection[artist_name].albums:
             album_path = os.path.join(artist_path, album_item.name)
-            gdrive.upload_album(drive, artist_name, album_path, album_item.name)
+            gdrive.upload_album(drive, artist_name, album_path, album_item.name, drive_collection)

@@ -1,5 +1,4 @@
 # Unit tests for music_sync_utils.py
-
 import unittest
 import music_sync_utils
 import random
@@ -19,12 +18,6 @@ def get_stock_collection(cat_number):
         collection[a1.name] = a1
         collection[a2.name] = a2
         return collection
-
-
-def get_stock_library(cat_number):
-    if cat_number == 1:
-        etag = 'this is stock lib 1'
-        lib_a = music_sync_utils.MusicLibrary(etag)
 
 
 def get_random_string(length):
@@ -118,8 +111,6 @@ class TestFindDuplicateAlbums(unittest.TestCase):
         :return:
         """
         lib_a = music_sync_utils.MusicLibrary('lib a')
-        lib_a
-
 
 
 class TestSubtractCollectionElements(unittest.TestCase):
@@ -136,7 +127,7 @@ class TestSubtractCollectionElements(unittest.TestCase):
         expected_lib = music_sync_utils.MusicLibrary('expected')
         a3 = create_stock_artist(3)
         expected_lib.collection = {a3.name: a3}
-        actual_result = music_sync_utils.subtract_collection_elements(lib_a, lib_b)
+        actual_result = lib_a.get_subtracted_collection_elements(lib_b)
         self.assertEqual(expected_lib.collection, actual_result.collection)
         for artist in actual_result.collection:
             self.assertEqual(actual_result.collection[artist], expected_lib.collection[artist])
@@ -162,15 +153,16 @@ class TestSubtractCollectionElements(unittest.TestCase):
         a5 = create_stock_artist(5)
         expected_lib = music_sync_utils.MusicLibrary('expected')
         expected_lib.collection = {a5.name: a5}
-        actual_result = music_sync_utils.subtract_collection_elements(lib_a, lib_b)
+        actual_result = lib_a.get_subtracted_collection_elements(lib_b)
         print 'lib a collection', lib_a.collection['The Monday Mornings'].albums
         print 'lib b collection', lib_b.collection['The Monday Mornings'].albums
         print 'expected collection', expected_lib.collection['The Monday Mornings'].albums
         print 'actual collection', actual_result.collection['The Monday Mornings'].albums
         self.assertEqual(expected_lib.collection, actual_result.collection)
-        for artist in actual_result.collection:
-            self.assertEqual(actual_result.collection[artist], expected_lib.collection[artist])
-            self.assertEqual(actual_result.collection[artist].albums, expected_lib.collection[artist].albums)
+        for artist_name in actual_result.collection:
+            self.assertEqual(actual_result.collection[artist_name], expected_lib.collection[artist_name])
+            for album in actual_result.collection[artist_name].albums:
+                self.assertIn(album, expected_lib.collection[artist_name].albums, 'Album {0} missing.'.format(album))
 
     def test_name_equality(self):
         a1 = create_stock_artist(1)
