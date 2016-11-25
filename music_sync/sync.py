@@ -6,7 +6,7 @@ import subprocess
 from subprocess import check_output, CalledProcessError
 from collections import deque, OrderedDict
 
-
+BIN_SIZE = 40
 MYDIR = os.path.dirname(__file__)
 boot_disc_path = '/dev/disk1'
 
@@ -24,7 +24,7 @@ def get_free_space_on_local():
     for line in df_output:
         tokens = line.split()
         if tokens[0] == boot_disc_path:
-            return int(tokens[3])/1024
+            return int(tokens[3]) / 1024
 
 
 def get_size_of_syncing_collection(sync_collection, drive_collection):
@@ -69,6 +69,7 @@ def sync_artist_from_temp_to_usb_and_delete(artist_path, temp_music_artist_path)
     returncode2 = subprocess.call(["rm"] + delete_arguments)
     return
 
+
 # TODO: What the hell? Fix this crap
 def delete_folder(folder=None):
     if folder is None:
@@ -108,7 +109,7 @@ def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collecti
         if not os.path.isdir(new_dir_artist):
             os.mkdir(new_dir_artist)
         space_on_local = get_free_space_on_local()
-        artist_size = drive_collection[artist_name].get_file_size_of_albums()/1024/1024
+        artist_size = drive_collection[artist_name].get_file_size_of_albums() / 1024 / 1024
         print 'Artist {0} is size {1}.'.format(artist_name, artist_size)
         print 'We have {0} mb left on local machine.'.format(space_on_local)
         if artist_size < space_on_local:
@@ -127,74 +128,123 @@ def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collecti
     return
 
 
-def remove_extra_bins(bins, min_size):
-    for idx, bin in enumerate(bins):
-        if bin[1] - bin[0] < min_size:
-            # Check if bin below and get size
-            if idx - 1 >= 0:
-                below_size = bins[idx-1][1] - bins[idx-1][0]
-            if idx + 1 < len(bins):
-                above_size = bins[idx+1][1] - bins[idx+1][0]
-
-
 def bin_folder(path):
     """
-    Given a path containing only folders, group the folders into a fixed number of bins by alphabet.
-    :param path: The path containing folders to put into bins.
-    :return: Fuck if I know
+    Given a path, take its contents and put those items into buckets, alphabetically.
+
+    Given a bin size, we aim to minimize the sum of square residuals,
+    Where the residual is the difference between the expected end index of the next bin
+    And the closest available index.
+
+    :param path: The path to bin
+    :return: Dict of index: bin_size pairs
     """
+    # Get folders to bin
+    folders = get_folders_from_path(path)
 
-    # Okay well I guess we should get a list of the directories to bin
+    # Get idx: char ordered dict
+    boundaries = get_character_boundaries(folders)
+    # The list of indicies which should end each bin.
+    bin_indicies = sorted(get_bin_indicies(boundaries, 0, len(folders)))
+    print 'bin indicies', bin_indicies
+
+    # bin_name: [] of names
+    bin_dict = {}
+    boundary = True
+    lag_char_idx = 0
+    for char_idx in boundaries:
+        if boundary:
+            # start of bin
+            boundary = False
+            new_bin_name = str(boundaries[char_idx] + ' - ')
+
+        if char_idx in bin_indicies:
+            # end of bin
+            boundary = True
+            new_bin_name = new_bin_name + boundaries[char_idx]
+            bin_dict[new_bin_name] = folders[lag_char_idx:char_idx+1]
+            lag_char_idx = char_idx+1
+
+
+def get_bin_indicies(boundaries, current_index, last_index, bin_indicies=None):
+    """
+    Get the indicies to end each bin at.
+    Works pretty well so far, but need to fix last tiny bin.
+    :param boundaries: The ends of each character
+    :param current_index: The current index
+    :param last_index: The value of the last index.
+    :param bin_indicies: The list of indicies to fill and return.
+    :return: bin_indicies
+    """
+    if bin_indicies is None:
+        bin_indicies = []
+
+    target_index = current_index + BIN_SIZE
+
+    # We don't want the last bin to be less than half of BIN_SIZE
+    if target_index + (BIN_SIZE / float(2)) > last_index or target_index > last_index:
+        bin_indicies.append(last_index)
+        return bin_indicies
+    else:
+        closest_index = get_closest_index(boundaries, target_index)
+        bin_indicies.append(closest_index)
+        return get_bin_indicies(boundaries, closest_index, last_index, bin_indicies)
+
+
+def get_closest_index(boundaries, target_index):
+    boundary_indicies = boundaries.keys()
+    closest_val = abs(target_index - boundary_indicies[0])
+    closest_key_idx = 0
+    for idx in boundaries:
+        if abs(target_index - idx) < closest_val:
+            closest_val = abs(target_index - idx)
+            closest_key_idx = idx
+    return closest_key_idx
+
+
+def get_character_boundaries(items):
+    """
+    Given a list of names, return the indicies which are a boundary between characters.
+    So the entry 12: A would mean that the entry at index 12 is the last entry for A.
+    :param items: list of folders
+    :return: dict of (idx: character)
+    """
+    boundaries = OrderedDict()
+    start = 0
+    char = items[start][0]
+    for idx, item in enumerate(items):
+        if item[0] != char:
+            boundaries[idx - 1] = char
+            char = item[0]
+    boundaries[len(items)] = items[-1:][0][0]
+    for idx in boundaries:
+        print 'Index : \'{0}\' is the end of character {1}.'.format(idx, boundaries[idx])
+
+    return boundaries
+
+
+def get_folders_from_path(path):
     sub_dirs = []
-
     dir_contents = os.listdir(path)
     for item in dir_contents:
-        item_path = os.path.join(path,item)
-        if os.path.isdir(item_path) and '.' != item_path.startswith('.'):
+        item_path = os.path.join(path, item)
+        if os.path.isdir(item_path) and not item.startswith('.'):
             sub_dirs.append(item)
-    print dir_contents
-    # So now we need to figure out how to bin these folders.
-    # At current scale (260 artist), as few as 5 bins is good.
-    # I'm going to say auto mode is floor of num of artists divided by a bin size 50.
-    bin_size = 50
-    num_bins = len(sub_dirs) / bin_size
+    return sorted(capitalize_first_char(sub_dirs))
 
-    # Now that we have the number of bins, we need to make the bins
-    # Make a dict of the index of the last Artist starting with that character.
-    char_index = OrderedDict()
-    rev_char_index = OrderedDict()
 
-    sub_dirs = sorted(sub_dirs)
-    incoming_char = sub_dirs[0][0]
-    for idx, artist in enumerate(sub_dirs):
-        c_0 = artist[0]
-        if c_0 != incoming_char:
-            # new char
-            rev_char_index[idx-1] = incoming_char
-            char_index[incoming_char] = idx - 1
-            incoming_char = c_0
-
-    # Cool, now we just need to assign the bins.
-    # First bin needs to start at 0 and last bin needs to end at len - 1 of course
-    bins = []
-    incoming_bin_idx = 0
-    j = 0
-    lagging_char = ''
-    for i in range(0, num_bins-1):
-        for char in char_index:
-            target_end = incoming_bin_idx + bin_size
-            print 'Bin {0}. Target folder idx is {1}. Checking char {2} w index {3}'.format(i, target_end, char, char_index[char])
-            if char_index[char] > target_end and lagging_char and char_index[lagging_char] > incoming_bin_idx:
-                print 'That\'s it for this bin. Including up to folder at idx {0}'.format(char_index[lagging_char])
-                bins.append((incoming_bin_idx, char_index[lagging_char]))
-                incoming_bin_idx = char_index[lagging_char]
-            lagging_char = char
-
-    bins.append((char_index[sorted(char_index.keys())[-2:][0]], char_index[char_index.keys()[-1:][0]]))
-    print 'bins ', bins
-
-    # Trim any tins bins (less than half spec size)
-    remove_extra_bins(bins, bin_size/2)
+def capitalize_first_char(lst):
+    """
+    Given a list of strings, capitalize the first character of each string.
+    Does not delete duplicates, which it probably should.
+    Lol, why didn't I just use a list comprehension...
+    :param lst:
+    :return:
+    """
+    new_list = []
+    for item in lst:
+        new_list.append(item[0].capitalize() + item[1:])
+    return new_list
 
 
 def upload_collection_to_gdrive(drive, sync_collection, usb_path, drive_collection):
