@@ -57,7 +57,10 @@ def get_gdrive_artists_from_collection(sync_collection, drive_collection):
     return gdrive_artists
 
 
+# TODO: Fix this crap
 def sync_artist_from_temp_to_usb_and_delete(artist_path, temp_music_artist_path):
+    if not os.path.isdir(artist_path):
+        os.mkdir(artist_path)
     for album in os.listdir(temp_music_artist_path):
         temp_album_path = os.path.join(temp_music_artist_path, album)
         # Sync album from temp to usb
@@ -128,7 +131,23 @@ def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collecti
     return
 
 
-def bin_folder(path):
+def unbin_folder(folder_path):
+    """
+    The inverse of bin_folder.
+    :param folder_path:
+    :return:
+    """
+    bin_paths = [os.path.join(folder_path, p) for p in os.listdir(folder_path) if not p.startswith('.') and '-' in p]
+    bin_dirs = [p for p in bin_paths if os.path.isdir(p)]
+    for bin_path in bin_dirs:
+        bin_contents = os.listdir(bin_path)
+        for artist_name in bin_contents:
+            new_artist_path = os.path.join(folder_path, artist_name)
+            old_artist_path = os.path.join(bin_path, artist_name)
+            sync_artist_from_temp_to_usb_and_delete(new_artist_path, old_artist_path)
+        delete_folder(bin_path)
+
+def bin_folder(folder_path):
     """
     Given a path, take its contents and put those items into buckets, alphabetically.
 
@@ -136,11 +155,11 @@ def bin_folder(path):
     Where the residual is the difference between the expected end index of the next bin
     And the closest available index.
 
-    :param path: The path to bin
+    :param folder_path: The path to bin
     :return: Dict of index: bin_size pairs
     """
     # Get folders to bin
-    folders = get_folders_from_path(path)
+    folders = get_folders_from_path(folder_path)
 
     # Get idx: char ordered dict
     boundaries = get_character_boundaries(folders)
@@ -156,14 +175,28 @@ def bin_folder(path):
         if boundary:
             # start of bin
             boundary = False
-            new_bin_name = str(boundaries[char_idx] + ' - ')
+            new_bin_name = str(boundaries[char_idx].upper() + ' - ')
 
         if char_idx in bin_indicies:
             # end of bin
             boundary = True
-            new_bin_name = new_bin_name + boundaries[char_idx]
+            new_bin_name = new_bin_name + boundaries[char_idx].upper()
             bin_dict[new_bin_name] = folders[lag_char_idx:char_idx+1]
             lag_char_idx = char_idx+1
+
+    for bin_name in bin_dict:
+        print 'Bin: {0} has contents: \n{1}'.format(bin_name, bin_dict[bin_name])
+
+    for bin_name in bin_dict:
+        # make a directory
+        bin_path = os.path.join(folder_path, bin_name)
+        print 'Processing bin at: ', bin_path
+        if not os.path.isdir(bin_path):
+            os.mkdir(bin_path)
+        for artist_name in bin_dict[bin_name]:
+            new_artist_path = os.path.join(bin_path, artist_name)
+            old_artist_path = os.path.join(folder_path, artist_name)
+            sync_artist_from_temp_to_usb_and_delete(new_artist_path, old_artist_path)
 
 
 def get_bin_indicies(boundaries, current_index, last_index, bin_indicies=None):
@@ -211,12 +244,12 @@ def get_character_boundaries(items):
     """
     boundaries = OrderedDict()
     start = 0
-    char = items[start][0]
+    char = items[start][0].lower()
     for idx, item in enumerate(items):
-        if item[0] != char:
+        if item[0].lower() != char:
             boundaries[idx - 1] = char
-            char = item[0]
-    boundaries[len(items)] = items[-1:][0][0]
+            char = item[0].lower()
+    boundaries[len(items)] = items[-1:][0][0].lower()
     for idx in boundaries:
         print 'Index : \'{0}\' is the end of character {1}.'.format(idx, boundaries[idx])
 
@@ -230,21 +263,7 @@ def get_folders_from_path(path):
         item_path = os.path.join(path, item)
         if os.path.isdir(item_path) and not item.startswith('.'):
             sub_dirs.append(item)
-    return sorted(capitalize_first_char(sub_dirs))
-
-
-def capitalize_first_char(lst):
-    """
-    Given a list of strings, capitalize the first character of each string.
-    Does not delete duplicates, which it probably should.
-    Lol, why didn't I just use a list comprehension...
-    :param lst:
-    :return:
-    """
-    new_list = []
-    for item in lst:
-        new_list.append(item[0].capitalize() + item[1:])
-    return new_list
+    return sorted(sub_dirs, key=lambda s: s.lower())
 
 
 def upload_collection_to_gdrive(drive, sync_collection, usb_path, drive_collection):
