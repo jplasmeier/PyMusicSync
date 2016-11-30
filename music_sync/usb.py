@@ -88,15 +88,6 @@ def check_df_output():
         sys.exit(1)
 
 
-# ship
-def check_ioreg_output():
-    try:
-        return check_output(["ioreg", "-p", "IOUSB", "-l", "-w", "0"]).split("+-o")
-    except CalledProcessError as err:
-        print "Error making IOREG call: {}".format(err)
-        sys.exit(1)
-
-
 # os calls
 # we ensure that file paths still exist in case we are on a flaky NFS
 
@@ -107,15 +98,6 @@ def get_last_mod_by(artist_path):
         return os.path.getmtime(artist_path)
     except OSError as err:
         print 'Artist path no longer exists'
-        sys.exit(1)
-
-
-# ship
-def get_album_list(artist_path):
-    try:
-        return os.listdir(artist_path)
-    except OSError as err:
-        print 'Artist path no longer exists: ', err
         sys.exit(1)
 
 
@@ -167,38 +149,10 @@ def get_folder_paths(device_path):
         sys.exit(1)
 
 
-# TODO: Refactor this shit show
-def get_ioreg_devices():
-    devices = check_ioreg_output()
-    ioreg_info = {}
-    for dev in devices:
-        lines = dev.split("\n")
-        this_device = {}
-        for line in lines:
-            if "sessionID" in line:
-                sessionID = re.search(r'\d+',line).group(0)
-            if "USB Vendor Name" in line:
-                usb_vendor_name = line
-            if "USB Product Name" in line:
-                usb_product_name = line
-            if "USB Serial Number" in line:
-                usb_serial_number = line
-        try: 
-            this_device["USB Vendor Name"] = usb_vendor_name
-            this_device["USB Product Name"] = usb_product_name
-            this_device["USB Serial Number"] = usb_serial_number
-            # We use sessionID as the key
-            ioreg_info[sessionID] = this_device
-        except Exception, err:
-            print "Error while reading from IOReg: {}".format(err)
-    return ioreg_info
-
-
 def get_df_devices():
     """
     Should return a list of DF objects.
     """
-    df_info = {}
     exfat_devices = check_df_output()
     df_objects = []
     for exfat_device in exfat_devices:
@@ -217,30 +171,11 @@ def get_df_info_for_device(device_path):
             return df_device
     raise Exception("Could not find an exfat device in df with path: {0}".format(device_path))
 
-# TODO: Actually give the user a choice...
-def pick_from_ioreg():
-    ioreg_devices = get_ioreg_devices() 
-    for idx, dev in enumerate(ioreg_devices):
-        print "Device {0}: ".format(idx)
-        ioreg_devices[dev]["Device"] = idx
-        pprint.pprint(ioreg_devices[dev])
-    # prompt user selection
-    choice = int(raw_input("Enter the number of the device which you would like to sync:"))
-    return [ioreg_devices[dev] for dev in ioreg_devices if ioreg_devices[dev]["Device"] == choice]
-
 
 def get_album_items(artist_path):
     album_items = []
     album_names = get_folder_names(artist_path)
     for album_name in album_names:
         album_path = os.path.join(artist_path, album_name)
-        album_items.append(music_sync_utils.AlbumItem(album_name, album_path))
+        album_items.append(USBAlbumItem(album_name, album_path))
     return album_items
-
-
-def get_device_free_space(usb_device_path):
-    """
-    Get the amount of free space on the USB Device
-    :param usb_device_path:
-    :return:
-    """
