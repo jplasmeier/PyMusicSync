@@ -3,11 +3,51 @@
 # Author: J. Plasmeier | jplasmeier@gmail.com
 # License: MIT License
 from subprocess import check_output, CalledProcessError
+import logger
 import os
-import re
 import pprint
+import re
 import sys
 import music_sync_utils
+
+
+class USBLibrary(music_sync_utils.MediaLibrary):
+    """
+    USB Device specific collection. Includes file path of device.
+    """
+    def __init__(self, path):
+        super(USBLibrary, self).__init__(os.path.getmtime(path))
+        self.file_path = path
+        self.get_usb_collection()
+        self.clean_unicode()
+
+    def get_usb_collection(self):
+        """
+        Get a collection of Artist names and objects from the path selected before.
+        """
+        if self.collection is None:
+            self.collection = {}
+        artist_names = get_folder_names(self.file_path)
+        for artist_name in artist_names:
+            # Create an ArtistItem
+            artist_path = os.path.join(self.file_path, artist_name)
+            artist_item = music_sync_utils.ArtistItem(artist_name, get_last_mod_by(artist_path))
+            self.collection[artist_name] = artist_item
+
+            # Now get the albums
+            album_items = get_album_items(artist_path)
+            # If there aren't any, log a warning.
+            if album_items is None:
+                logger.log_warning("Artist {0} has no albums.".format(artist_name))
+            else:
+                self.collection[artist_name].albums = album_items
+        return self
+
+
+class USBAlbumItem(music_sync_utils.AlbumItem):
+    def __init__(self, album_name, album_path):
+        file_size = get_directory_size(album_path)
+        super(USBAlbumItem, self).__init__(album_name, file_size)
 
 
 class DFDevice:
@@ -88,28 +128,55 @@ def get_album_list(artist_path):
     try:
         return os.listdir(artist_path)
     except OSError as err:
-        print 'Artist path no longer exists.'
+        print 'Artist path no longer exists: ', err
         sys.exit(1)
 
 
 # ship
-def get_album_size(album_path):
+def get_directory_size(album_path):
     try:
         if os.path.isdir(album_path):
             return os.path.getsize(album_path)
         else:
             return
     except OSError as err:
-        print 'Album candidate no longer exists.'
+        print 'Directory at {0} no longer exists: {1}'.format(album_path, err)
         sys.exit(1)
 
 
 # ship
-def get_artists(device_path):
+def get_folder_names(device_path):
     try:
-        return os.listdir(device_path)
+        folder_paths = []
+        # Get non-hidden contents
+        contents = [f for f in os.listdir(device_path) if not f.startswith('.')]
+
+        # Only return directories
+        for item_name in contents:
+            item_path = os.path.join(device_path, item_name)
+            if os.path.isdir(item_path):
+                folder_paths.append(item_name)
+        return folder_paths
     except OSError as err:
-        print "Error accessing USB device: {}".format(err)
+        print "Error accessing USB device: ", err
+        sys.exit(1)
+
+
+# ship
+def get_folder_paths(device_path):
+    try:
+        folder_paths = []
+        # Get non-hidden contents
+        contents = [f for f in os.listdir(device_path) if not f.startswith('.')]
+
+        # Only return directories
+        for item in contents:
+            item_path = os.path.join(device_path, item)
+            if os.path.isdir(item_path):
+                folder_paths.append(item_path)
+        return folder_paths
+    except OSError as err:
+        print "Error accessing USB device: ", err
         sys.exit(1)
 
 
@@ -183,44 +250,10 @@ def pick_from_ioreg():
     return [ioreg_devices[dev] for dev in ioreg_devices if ioreg_devices[dev]["Device"] == choice]
 
 
-# ship!
-def get_usb_collection(device_path):
-    """
-    Get a collection of Artist names and objects from the path selected before.
-    """
-    usb_collection = {} 
-    artists = get_artists(device_path)
-    for artist in artists:
-        # TODO: Replace with artist_path = os.path.join(device_path, artist) on successful test
-        artist_path = device_path + '/' + artist
-
-        # Only grab directories and non-hidden files
-        # They are hidden for chrissakes
-        if os.path.isdir(artist_path) and not artist.startswith('.'):
-            artist_item = music_sync_utils.ArtistItem(artist, get_last_mod_by(artist_path))
-            usb_collection[artist] = artist_item
-            album_list = get_album_items(artist_path)
-            if album_list is not None:
-                usb_collection[artist].albums = album_list
-    return usb_collection
-
-
-# ship
-def get_album_item_from_path(album_path, album_candidate):
-    album_size = get_album_size(album_path)
-    if album_size is not None:
-        return music_sync_utils.AlbumItem(album_candidate, album_size)
-    else:
-        return
-
-
-# ship
 def get_album_items(artist_path):
     album_items = []
-    albums_and_files = get_album_list(artist_path)
-    for album_candidate in albums_and_files:
-        album_path = artist_path + '/' + album_candidate
-        album = get_album_item_from_path(album_path, album_candidate)
-        if album is not None:
-            album_items.append(album)
+    album_names = get_folder_names(artist_path)
+    for album_name in album_names:
+        album_path = os.path.join(artist_path, album_name)
+        album_items.append(music_sync_utils.AlbumItem(album_name, album_path))
     return album_items

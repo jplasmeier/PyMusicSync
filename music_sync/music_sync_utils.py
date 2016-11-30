@@ -18,7 +18,7 @@ class NameEqualityMixin(object):
         return hash(self.name)
 
 
-class MusicLibrary(object):
+class MediaLibrary(object):
     """
     Class to store music collections in a way that is useful to this program.
     :param etag: Optional parameter if there is somehow support for getting last mod by from children' children changes
@@ -52,7 +52,8 @@ class MusicLibrary(object):
                 clean_album = copy.deepcopy(album)
                 clean_album.name = clean_album_name
                 clean_collection[clean_artist_name].albums.append(clean_album)
-        return clean_collection
+        self.collection = clean_collection
+        return self
 
     def get_subtracted_collection_elements(self, library_b):
         """
@@ -60,7 +61,7 @@ class MusicLibrary(object):
         :param library_b: the collection to subtract from this object
         :return: Dict of elements a of A such that a not in B.
         """
-        result_library = MusicLibrary('result')
+        result_library = MediaLibrary('result')
         for artist_name in self.collection:
             # Add artist to result set
             if artist_name not in library_b.collection:
@@ -73,15 +74,6 @@ class MusicLibrary(object):
                             result_library.collection[artist_name].albums = []
                         result_library.collection[artist_name].albums.append(album)
         return result_library
-
-
-class USBLibrary(MusicLibrary):
-    """
-    USB Device specific collection. Includes file path of device.
-    """
-    def __init__(self, path):
-        super(USBLibrary, self).__init__(os.path.getmtime(path))
-        self.file_path = path
 
 
 class CollectionItem(NameEqualityMixin):
@@ -197,7 +189,7 @@ def find_duplicate_albums(missing_from_usb, missing_from_drive):
     :param missing_from_drive: A library of artists with albums that are missing from Drive
     :return: A tuple of two libraries, one for each of the actual libraries, containing the actually missing artists.
     """
-    actually_missing_from_usb = MusicLibrary(missing_from_usb.etag)
+    actually_missing_from_usb = MediaLibrary(missing_from_usb.etag)
 
     # TODO: Write unittests
     for artist_name in missing_from_drive.collection:
@@ -264,7 +256,7 @@ def clean_unicode(collection):
 def fix_possible_duplicate_albums(missing_from_usb, missing_from_drive):
     """
     :param missing_from_drive The MusicColleciton of music on USB but not Drive
-    :param missing_from_usb The MusicLibrary of music on Drive but not USB
+    :param missing_from_usb The MediaLibrary of music on Drive but not USB
     Update files to match
     """
     raise NotImplementedError

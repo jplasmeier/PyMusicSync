@@ -110,21 +110,21 @@ class TestFindDuplicateAlbums(unittest.TestCase):
         Or are substrings of each other.
         :return:
         """
-        lib_a = music_sync_utils.MusicLibrary('lib a')
+        lib_a = music_sync_utils.MediaLibrary('lib a')
 
 
 class TestSubtractCollectionElements(unittest.TestCase):
 
     def test_missing_artist(self):
-        lib_a = music_sync_utils.MusicLibrary('a')
-        lib_b = music_sync_utils.MusicLibrary('b')
+        lib_a = music_sync_utils.MediaLibrary('a')
+        lib_b = music_sync_utils.MediaLibrary('b')
 
         # Has 3 unique artists
         # Has 2 unique artist
         lib_a.collection = get_stock_collection(1)
         lib_b.collection = get_stock_collection(2)
 
-        expected_lib = music_sync_utils.MusicLibrary('expected')
+        expected_lib = music_sync_utils.MediaLibrary('expected')
         a3 = create_stock_artist(3)
         expected_lib.collection = {a3.name: a3}
         actual_result = lib_a.get_subtracted_collection_elements(lib_b)
@@ -145,13 +145,13 @@ class TestSubtractCollectionElements(unittest.TestCase):
         a3 = create_stock_artist(3)
         a4 = create_stock_artist(4)
 
-        lib_a = music_sync_utils.MusicLibrary('a')
-        lib_b = music_sync_utils.MusicLibrary('b')
+        lib_a = music_sync_utils.MediaLibrary('a')
+        lib_b = music_sync_utils.MediaLibrary('b')
         lib_a.collection = {a1.name: a1, a2.name: a2, a3.name: a3}
         lib_b.collection = {a1.name: a1, a2.name: a2, a4.name: a4}
 
         a5 = create_stock_artist(5)
-        expected_lib = music_sync_utils.MusicLibrary('expected')
+        expected_lib = music_sync_utils.MediaLibrary('expected')
         expected_lib.collection = {a5.name: a5}
         actual_result = lib_a.get_subtracted_collection_elements(lib_b)
         print 'lib a collection', lib_a.collection['The Monday Mornings'].albums

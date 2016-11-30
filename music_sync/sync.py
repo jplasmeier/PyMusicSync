@@ -57,6 +57,19 @@ def get_gdrive_artists_from_collection(sync_collection, drive_collection):
     return gdrive_artists
 
 
+def sym_link_artist_from_temp_to_usb_and_delete(artist_path, temp_music_artist_path):
+    if not os.path.isdir(artist_path):
+        os.mkdir(artist_path)
+    # Symlink album from temp to usb
+    folder_arguments = ['-s', temp_music_artist_path, artist_path]
+    print 'Symlinking: ', ["ln"] + folder_arguments
+    returncode = subprocess.call(["ln"] + folder_arguments)
+    # Delete shit
+    #delete_arguments = ['-rf', temp_music_artist_path]
+    #returncode2 = subprocess.call(["rm"] + delete_arguments)
+    return
+
+
 # TODO: Fix this crap
 def sync_artist_from_temp_to_usb_and_delete(artist_path, temp_music_artist_path):
     if not os.path.isdir(artist_path):
@@ -144,7 +157,7 @@ def unbin_folder(folder_path):
         for artist_name in bin_contents:
             new_artist_path = os.path.join(folder_path, artist_name)
             old_artist_path = os.path.join(bin_path, artist_name)
-            sync_artist_from_temp_to_usb_and_delete(new_artist_path, old_artist_path)
+            sym_link_artist_from_temp_to_usb_and_delete(new_artist_path, old_artist_path)
         delete_folder(bin_path)
 
 def bin_folder(folder_path):
@@ -196,7 +209,7 @@ def bin_folder(folder_path):
         for artist_name in bin_dict[bin_name]:
             new_artist_path = os.path.join(bin_path, artist_name)
             old_artist_path = os.path.join(folder_path, artist_name)
-            sync_artist_from_temp_to_usb_and_delete(new_artist_path, old_artist_path)
+            sym_link_artist_from_temp_to_usb_and_delete(new_artist_path, old_artist_path)
 
 
 def get_bin_indicies(boundaries, current_index, last_index, bin_indicies=None):

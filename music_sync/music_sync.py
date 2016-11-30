@@ -1,10 +1,10 @@
 # -*- coding: utf-8 --
 from pydrive.drive import GoogleDrive
-import usb
 import gdrive
 import music_sync_utils
 import sync
 import sys
+import usb
 reload(sys)
 sys.setdefaultencoding('utf8')
 
@@ -18,11 +18,7 @@ def main():
     music_folder = gdrive.get_folder_from_root(drive, folder_name)
 
     # Create GoogleDriveCollection
-    google_drive_library = music_sync_utils.MusicLibrary(music_folder.metadata['etag'])
-
-    google_drive_library.collection = gdrive.get_google_drive_collection(drive, music_folder)
-    # TODO: This is weird looking...
-    google_drive_library.collection = google_drive_library.clean_unicode()
+    google_drive_library = gdrive.GoogleDriveLibrary(drive, music_folder)
 
     print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_library.get_collection_size()/1024/1024, google_drive_library.get_collection_size()/1000/1000/1000))
 
@@ -33,9 +29,7 @@ def main():
     print "You picked this device from DF: {}".format(df_device)
 
     # Create, fill, and clean USBCollection
-    usb_music_library = music_sync_utils.USBLibrary(df_device.mounted_on)
-    usb_music_library.collection = usb.get_usb_collection(usb_music_library.file_path)
-    usb_music_library.collection = music_sync_utils.clean_unicode(usb_music_library.collection)
+    usb_music_library = usb.USBLibrary(df_device.mounted_on)
 
     missing_from_usb = google_drive_library.get_subtracted_collection_elements(usb_music_library)
     missing_from_drive = usb_music_library.get_subtracted_collection_elements(google_drive_library)

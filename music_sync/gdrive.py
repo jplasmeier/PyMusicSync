@@ -4,6 +4,36 @@ import sys
 import music_sync_utils
 
 
+class GoogleDriveLibrary(music_sync_utils.MediaLibrary):
+
+    def __init__(self, drive, root_folder_name):
+        super(GoogleDriveLibrary, self).__init__()
+        self.init_google_drive_collection(drive, root_folder_name)
+        self.clean_unicode()
+
+    def init_google_drive_collection(self, drive, folder):
+        """
+        :param drive: the GoogleDrive object to pull metadata from Google Drive
+        :param folder: the name of the folder to pull metadata from. Currently must be in the root folder
+        """
+        if self.collection is None:
+            self.collection = {}
+
+        drive_artists = list_folder(drive, folder['id'])
+        len_drive_artists = len(drive_artists)
+        for idx, drive_artist in enumerate(drive_artists):
+            drive_artist_name = drive_artist['title']
+            # Artist not in collection yet
+            if drive_artist_name not in self.collection:
+                new_artist = DriveArtistItem(drive_artist_name, drive_artist)
+                new_artist.get_albums_for_artist(drive, drive_artist)
+                self.collection[drive_artist_name] = new_artist
+                # This will update the same line with the new percentage.
+                sys.stdout.write("\rDownloading Google Drive Metadata: {}".format(idx / float(len_drive_artists) * 100))
+                sys.stdout.flush()
+        return self
+
+
 class DriveArtistItem(music_sync_utils.ArtistItem):
     def __init__(self, name, drive_file):
         super(DriveArtistItem, self).__init__(name)
@@ -38,31 +68,6 @@ class DriveAlbumItem(music_sync_utils.AlbumItem):
     def __init__(self, name, file_size, drive_file):
         super(DriveAlbumItem, self).__init__(name, file_size)
         self.drive_file = drive_file
-
-# Collection Filling
-
-
-# TODO: This needs to be a bound method in a Google Drive subclass of the CollectionItem.
-def get_google_drive_collection(drive, folder):
-    """
-    :param drive: the GoogleDrive object to pull metadata from Google Drive
-    :param folder: the name of the folder to pull metadata from. Currently must be in the root folder
-    """
-    filled_collection = {}
-    drive_artists = list_folder(drive, folder['id'])
-    len_drive_artists = len(drive_artists)
-
-    for idx, drive_artist in enumerate(drive_artists):
-        drive_artist_name = drive_artist['title']
-        # Artist not in collection yet
-        if drive_artist_name not in filled_collection:
-            new_artist = DriveArtistItem(drive_artist_name, drive_artist)
-            new_artist.get_albums_for_artist(drive, drive_artist)
-            filled_collection[drive_artist_name] = new_artist
-            # This will update the same line with the new percentage.
-            sys.stdout.write("\rDownloading Google Drive Metadata: {}".format(idx / float(len_drive_artists) * 100))
-            sys.stdout.flush()
-    return filled_collection
 
 
 # Drive Utilities
