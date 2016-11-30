@@ -1,5 +1,6 @@
 # -*- coding: utf-8 --
 from pydrive.drive import GoogleDrive
+import config
 import gdrive
 import music_sync_utils
 import sync
@@ -13,23 +14,20 @@ def main():
     # Drive Setup
     gauth = gdrive.login()
     drive = GoogleDrive(gauth)
-    # TODO: Pull this out and into a config file
-    folder_name = 'Music'
+    folder_name = config.load_google_drive_folder_name()
     music_folder = gdrive.get_folder_from_root(drive, folder_name)
 
     # Create GoogleDriveCollection
     google_drive_library = gdrive.GoogleDriveLibrary(drive, music_folder)
-
-    print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_library.get_collection_size()/1024/1024, google_drive_library.get_collection_size()/1000/1000/1000))
+    print "Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_library.get_collection_size()/1024/1024, google_drive_library.get_collection_size()/1000/1000/1000)
 
     # USB Setup Stuff
-    df_device = usb.pick_from_df()
-
-    # These two print statements should probably go elsewhere/nowhere
-    print "You picked this device from DF: {}".format(df_device)
+    usb_device_path = config.load_usb_device_path()
+    usb_device_df_info = usb.get_df_info_for_device(usb_device_path)
+    print "You are using the USB Device at path: {}".format(usb_device_df_info.mounted_on)
 
     # Create, fill, and clean USBCollection
-    usb_music_library = usb.USBLibrary(df_device.mounted_on)
+    usb_music_library = usb.USBLibrary(usb_device_path)
 
     missing_from_usb = google_drive_library.get_subtracted_collection_elements(usb_music_library)
     missing_from_drive = usb_music_library.get_subtracted_collection_elements(google_drive_library)
@@ -43,8 +41,10 @@ def main():
 
     gdrive_sync_size = missing_from_usb.get_collection_size()
     print 'Size of GDrive files to be added (mb): ', gdrive_sync_size
+
     # watch out that size is hard coded against the df call - can return different things
-    free_space_usb = int(df_device.avail)/1024.0
+    free_space_usb = usb_device_df_info.avail
+
     print "Free space on USB (mb)", free_space_usb
     if free_space_usb < gdrive_sync_size:
         print "Not enough space on USB Device. Skipping..."

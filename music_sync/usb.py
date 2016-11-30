@@ -56,34 +56,17 @@ class USBAlbumItem(music_sync_utils.AlbumItem):
 class DFDevice:
     """
     Class to store information about a device from df
-    Might not need this........?
     """
-
-    # def __init__(self, filesystem, size, used, avail, capacity, iused, ifree, pct_iused, mounted_on):
-    #    self.filesystem = filesystem
-    #    self.size = size
-    #    self.used = used
-    #    self.avail = avail
-    #    self.capacity = capacity
-    #    self.iused = iused
-    #    self.ifree = ifree
-    #    self.pct_iused = pct_iused
-    #    self.mounted_on = mounted_on
-    
-    def __init__(self, identifier):
-        self.identifier = identifier
-
-    # wtf is this shit
-    def set_df_info(self, df_list):
-        self.filesystem = df_list[0] 
-        self.size = df_list[1]
-        self.used = df_list[2]
-        self.avail = df_list[3]
-        self.capacity = df_list[4]
-        self.iused = df_list[5]
-        self.ifree = df_list[6]
-        self.pct_iused = df_list[7]
-        self.mounted_on = df_list[8]
+    def __init__(self, df_tokens):
+        self.filesystem = df_tokens[0]
+        self.size = df_tokens[1]
+        self.used = df_tokens[2]
+        self.avail = df_tokens[3]
+        self.capacity = df_tokens[4]
+        self.iused = df_tokens[5]
+        self.ifree = df_tokens[6]
+        self.pct_iused = df_tokens[7]
+        self.mounted_on = df_tokens[8]
 
     def get_free_space(self):
         return self.avail
@@ -98,7 +81,8 @@ class DFDevice:
 # ship
 def check_df_output():
     try:
-        return check_output(["df", "-k", "-T", "exfat"]).split("\n")
+        # Skip the first item, it's just the headers.
+        return check_output(["df", "-k", "-T", "exfat"]).split("\n")[1:]
     except CalledProcessError as err:
         print "Error making DF call: {}".format(err)
         sys.exit(1)
@@ -215,31 +199,23 @@ def get_df_devices():
     Should return a list of DF objects.
     """
     df_info = {}
-    results = check_df_output()
+    exfat_devices = check_df_output()
     df_objects = []
-    for res in results[1:]:
-        tokens = res.split()
+    for exfat_device in exfat_devices:
+        tokens = exfat_device.split()
         if len(tokens) >= 9:
-            df_obj = DFDevice(tokens[8])
-            df_obj.set_df_info(tokens)
-            df_objects.append(df_obj)
+            df_objects.append(DFDevice(tokens))
     return df_objects
 
 
-def print_dict_list(dict_to_print):
-    for key in dict_to_print:
-            print dict_to_print[key], '\n'
-
-
-# Expose these functions to main
-# TODO: Actually give the user a choice...
-def pick_from_df():
+def get_df_info_for_device(device_path):
     df_devices = get_df_devices() 
-    if len(df_devices) >= 1:
-        return df_devices[0]
-    else:
+    if len(df_devices) <= 1:
         raise Exception("No USB Device Connected.")
-
+    for df_device in df_devices:
+        if df_device.mounted_on == device_path:
+            return df_device
+    raise Exception("Could not find an exfat device in df with path: {0}".format(device_path))
 
 # TODO: Actually give the user a choice...
 def pick_from_ioreg():
@@ -260,3 +236,11 @@ def get_album_items(artist_path):
         album_path = os.path.join(artist_path, album_name)
         album_items.append(music_sync_utils.AlbumItem(album_name, album_path))
     return album_items
+
+
+def get_device_free_space(usb_device_path):
+    """
+    Get the amount of free space on the USB Device
+    :param usb_device_path:
+    :return:
+    """

@@ -38,6 +38,8 @@ For an artist, we differentiate as such:
 
 ## Abstract File Schema
 
+This is planned for the future. 
+
 We would like a flexible way to represent the structure of the media which you are syncing. The best way to do this will be through a tree syntax, where each node is either a parent or a leaf. Leaf nodes are folders which are considered atomic (e.g. albums). 
 
 So my music collection follows this syntax:
@@ -47,7 +49,6 @@ So my music collection follows this syntax:
 It is important to note that a leaf node need not itself be a leaf in terms of its actual contents. For example, an album may itself contain multiple subdirectories containing images or the first and second disc. 
 
 ## User Interface
-
 
 How should the functionality of Mass Media Sync be exposed to the end user?
 
