@@ -1,3 +1,4 @@
+# -*- coding: utf-8 --
 # usb.py
 # A module to find and save USB device information on a Mac.
 # Author: J. Plasmeier | jplasmeier@gmail.com
@@ -9,6 +10,8 @@ import pprint
 import re
 import sys
 import music_sync_utils
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 
 class USBLibrary(music_sync_utils.MediaLibrary):

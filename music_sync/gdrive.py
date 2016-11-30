@@ -1,11 +1,10 @@
 from pydrive.auth import GoogleAuth
+import music_sync_utils
 import os
 import sys
-import music_sync_utils
 
 
 class GoogleDriveLibrary(music_sync_utils.MediaLibrary):
-
     def __init__(self, drive, root_folder_name):
         super(GoogleDriveLibrary, self).__init__()
         self.init_google_drive_collection(drive, root_folder_name)
@@ -126,6 +125,16 @@ def get_folder_from_root(drive, file_title):
             return file1
 
 
+# TODO: Implement
+def get_root_folder(drive):
+    """
+    Returns the GoogleDriveFile of the root.
+    :param drive:
+    :return:
+    """
+    raise NotImplementedError
+
+
 def get_file_ext_type(drive_file):
     """
     :param drive_file: The GoogleDriveFile to get the file type of
@@ -213,7 +222,44 @@ def download_file(child, download_to):
 
 # Upload
 
+# TODO: Test and then use to upload instead.
+def upload_recursive(drive, upload_name, upload_path, upload_to):
+    """
+    Given a Drive folder, recursively download that folder and it's children
+    :param drive: The drive object
+    :param upload_path: The path of the content to upload
+    :param upload_to: The GoogleDriveFile to upload to
+    :return: None
+    """
+    if os.path.isdir(upload_path):
+        # This is a directory. Make a GDrive folder and recurse
+        drive_parent = create_folder(drive, upload_name, upload_to['id'])
+        for item_name in os.listdir(upload_path):
+            item_path = os.path.join(upload_path, item_name)
+            upload_recursive(drive, item_name, item_path, drive_parent['id'])
+    else:
+        # This is a file. Upload it to the parent folder and return.
+        upload_file(drive, upload_name, upload_path, upload_to['id'])
+        return
+    return
 
+
+def upload_file(drive, file_name, file_path, parent):
+    """
+    Uploads a file with a given parent.
+    :param file_name: The name of the file to upload
+    :param file_path: The local path of the file being uploaded.
+    :param parent: The GoogleDriveFile of the parent
+    :return:
+    """
+    print 'Uploading file {0} to: {1}'.format(file_path, parent['title'])
+    new_drive_file = drive.CreateFile({'title': file_name, 'parents': [{'id': parent['id']}]})
+    new_drive_file.SetContentFile(file_path)
+    new_drive_file.Upload()
+    return
+
+
+# TODO: Deprecate and remove once recursive version is done.
 def upload_album(drive, artist_name, album_path, album_name, collection):
     """
     Upload an album to Google Drive.
