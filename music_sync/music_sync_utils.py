@@ -2,6 +2,7 @@
 import codecs
 import copy
 
+
 class NameEqualityMixin(object):
 
     def __eq__(self, other):
@@ -239,24 +240,3 @@ def check_duplicate_string(s1, s2):
         return True
     else:
         return False
-
-
-def clean_unicode(collection):
-    clean_collection = {}
-    for artist_name in collection:
-        clean_artist_name = codecs.utf_8_decode(artist_name.encode('utf-8'))[0]
-        clean_collection[clean_artist_name] = copy.deepcopy(collection[artist_name])
-        clean_collection[clean_artist_name].albums = []
-        for album in collection[artist_name].albums:
-            clean_album_name = codecs.utf_8_decode(album.name.encode('utf-8'))[0]
-            clean_collection[clean_artist_name].albums.append(AlbumItem(clean_album_name, album.file_size))
-    return clean_collection
-
-
-def fix_possible_duplicate_albums(missing_from_usb, missing_from_drive):
-    """
-    :param missing_from_drive The MusicColleciton of music on USB but not Drive
-    :param missing_from_usb The MediaLibrary of music on Drive but not USB
-    Update files to match
-    """
-    raise NotImplementedError
