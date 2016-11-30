@@ -7,7 +7,6 @@ import sync
 import sys
 import usb
 reload(sys)
-sys.setdefaultencoding('utf8')
 
 
 def main():
@@ -17,18 +16,20 @@ def main():
     folder_name = config.load_google_drive_folder_name()
     music_folder = gdrive.get_folder_from_root(drive, folder_name)
 
-    # Create GoogleDriveCollection
+    # Initialize GoogleDriveLibrary
     google_drive_library = gdrive.GoogleDriveLibrary(drive, music_folder)
     print "Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_library.get_collection_size()/1024/1024, google_drive_library.get_collection_size()/1000/1000/1000)
 
-    # USB Setup Stuff
+    # USB Setup
     usb_device_path = config.load_usb_device_path()
     usb_device_df_info = usb.get_df_info_for_device(usb_device_path)
     print "You are using the USB Device at path: {}".format(usb_device_df_info.mounted_on)
+    print "Your USB Device has {0} mb free". format(int(usb_device_df_info.avail) / float(1024))
 
-    # Create, fill, and clean USBCollection
+    # Initialize USBLibrary
     usb_music_library = usb.USBLibrary(usb_device_path)
 
+    # Compare libraries
     missing_from_usb = google_drive_library.get_subtracted_collection_elements(usb_music_library)
     missing_from_drive = usb_music_library.get_subtracted_collection_elements(google_drive_library)
 
@@ -42,7 +43,6 @@ def main():
     gdrive_sync_size = missing_from_usb.get_collection_size()
     print 'Size of GDrive files to be added (mb): ', gdrive_sync_size
 
-    # watch out that size is hard coded against the df call - can return different things
     free_space_usb = usb_device_df_info.avail
 
     print "Free space on USB (mb)", free_space_usb

@@ -1,4 +1,5 @@
 from pydrive.auth import GoogleAuth
+import logger
 import music_sync_utils
 import os
 import sys
@@ -59,6 +60,7 @@ class DriveArtistItem(music_sync_utils.ArtistItem):
                 audio_in_artist.append(drive_album_name)
         if audio_in_artist:
             for audio in audio_in_artist:
+                logger.log_warning("Heads up, you have some audio files directly under an artist: {}".format(audio))
                 print "\rHeads up, you have some audio files directly under an artist: {}".format(audio)
         return drive_albums_added
 

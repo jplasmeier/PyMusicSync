@@ -43,11 +43,9 @@ class MediaLibrary(object):
     def clean_unicode(self):
         clean_collection = {}
         for artist_name in self.collection:
-            print 'cleaning artist: ', artist_name
             clean_artist_name = codecs.utf_8_decode(artist_name.encode('utf-8'))[0]
             clean_collection[clean_artist_name] = ArtistItem(artist_name)
             for album in self.collection[artist_name].albums:
-                print 'cleaning album: ', album.name
                 clean_album_name = codecs.utf_8_decode(album.name.encode('utf-8'))[0]
                 new_album_item = AlbumItem(clean_album_name, album.file_size)
                 if album.drive_file is not None:

@@ -1,17 +1,12 @@
-# -*- coding: utf-8 --
 # usb.py
 # A module to find and save USB device information on a Mac.
 # Author: J. Plasmeier | jplasmeier@gmail.com
 # License: MIT License
 from subprocess import check_output, CalledProcessError
 import logger
-import os
-import pprint
-import re
-import sys
 import music_sync_utils
-reload(sys)
-sys.setdefaultencoding('utf8')
+import os
+import sys
 
 
 class USBLibrary(music_sync_utils.MediaLibrary):
@@ -164,7 +159,7 @@ def get_df_devices():
 
 def get_df_info_for_device(device_path):
     df_devices = get_df_devices() 
-    if len(df_devices) <= 1:
+    if len(df_devices) <= 0:
         raise Exception("No USB Device Connected.")
     for df_device in df_devices:
         if df_device.mounted_on == device_path:
