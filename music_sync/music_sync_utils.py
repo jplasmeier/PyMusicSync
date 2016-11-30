@@ -65,7 +65,7 @@ class MediaLibrary(object):
             # Add artist to result set
             if artist_name not in library_b.collection:
                 result_library.collection[artist_name] = copy.deepcopy(self.collection[artist_name])
-        else:
+            else:
                 for album in self.collection[artist_name].albums:
                     if album not in library_b.collection[artist_name].albums:
                         if artist_name not in result_library.collection:
