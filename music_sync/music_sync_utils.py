@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 # Utilities for MusicSync
 import codecs
 import copy
-
+import sys
+reload(sys)
 
 class NameEqualityMixin(object):
 
@@ -44,12 +46,12 @@ class MediaLibrary(object):
         clean_collection = {}
         for artist_name in self.collection:
             clean_artist_name = codecs.utf_8_decode(artist_name.encode('utf-8'))[0]
-            clean_collection[clean_artist_name] = ArtistItem(artist_name)
+            clean_collection[clean_artist_name] = copy.deepcopy(self.collection[artist_name])
+            clean_collection[clean_artist_name].albums = []
             for album in self.collection[artist_name].albums:
                 clean_album_name = codecs.utf_8_decode(album.name.encode('utf-8'))[0]
-                new_album_item = AlbumItem(clean_album_name, album.file_size)
-                if album.drive_file is not None:
-                    new_album_item.drive_file = album.drive_file
+                new_album_item = copy.deepcopy(album)
+                new_album_item.name = clean_album_name
                 clean_collection[clean_artist_name].albums.append(new_album_item)
         self.collection = clean_collection
         return self
@@ -122,10 +124,6 @@ class AlbumItem(CollectionItem):
         return self.name
 
 
-# (A - B)
-
-
-
 def check_drive_not_in_usb_collection(drive_collection, usb_collection):
     missing_from_usb_collection = {}
     for artist in drive_collection:
@@ -164,7 +162,7 @@ def print_collection(collection):
     for artist in collection:
         print "Artist:", artist
         for album in collection[artist].albums:
-            print "-----Album: ", album
+            print "-----Album: ", album.name.encode('utf-8')
 
 
 def get_difference(album, artist_name, missing_from_usb):
@@ -172,7 +170,7 @@ def get_difference(album, artist_name, missing_from_usb):
         return
     for usb_album in missing_from_usb.collection[artist_name].albums:
         if check_duplicate_string(usb_album.name, album.name):
-            print 'False Positive detected! {0} and {1} are actually the same'.format(usb_album.name, album.name)
+            print 'False Positive detected! {0} and {1} are actually the same'.format(usb_album.name.encode('utf-8'), album.name.encode('utf-8'))
             return
     return album
 
@@ -219,8 +217,8 @@ def check_duplicate_string(s1, s2):
     """
     words_s1 = s1.split(' ')
     words_s2 = s2.split(' ')
-    s1 = ' '.join(w for w in words_s1 if w not in words_s2)
-    s2 = ' '.join(w for w in words_s2 if w not in words_s1)
+    s1 = ' '.join(w for w in words_s1 if w not in words_s2).encode('utf-8')
+    s2 = ' '.join(w for w in words_s2 if w not in words_s1).encode('utf-8')
     chars_s1 = {}
     chars_s2 = {}
     for c in str(s1):

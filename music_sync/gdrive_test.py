@@ -14,6 +14,7 @@ test_folder_artists = ['Vampire Weekend', 'Big L']
 test_folder_albums = {'Vampire Weekend': ['2013 - Modern Vampires of the City [Deluxe Edition] (2013)', 'Contra', 'Vampire Weekend [Japan Import] V0'],
                       'Big L': ['Lifestylez Ov Da Poor and Dangerous', 'The Big Picture']}
 local_folder_name = 'temp_test_music'
+test_upload_dir_name = 'test_upload'
 
 # Helper Functions
 
@@ -33,7 +34,6 @@ class TestDownloadRecursive(unittest.TestCase):
 
         :return:
         """
-
         # Download to Local
         drive = GoogleDrive(gdrive.login())
         music_folder = gdrive.get_folder_from_root(drive, test_folder_name)
@@ -53,3 +53,21 @@ class TestDownloadRecursive(unittest.TestCase):
         # Clean up
         delete_arguments = ['-rf', local_dir]
         return subprocess.call(["rm"] + delete_arguments)
+
+
+class TestUploadRecursive(unittest.TestCase):
+
+    def test_upload_folder(self):
+        """
+        Upload a test folder to Google Drive.
+        Verify that the files are there.
+        :return:
+        """
+        drive = GoogleDrive(gdrive.login())
+        music_folder = gdrive.get_folder_from_root(drive, test_folder_name)
+        test_upload_dir_path = os.path.join(MYDIR, test_upload_dir_name)
+
+        if not os.path.isdir(test_upload_dir_path):
+            raise Exception("Test directory does not exist. Abort!")
+
+        gdrive.upload_recursive(drive, test_upload_dir_name, test_upload_dir_path, music_folder)

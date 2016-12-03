@@ -1,8 +1,10 @@
-# -*- coding: utf-8 --
+# -*- coding: utf-8 -*-
 from pydrive.drive import GoogleDrive
 import config
 import gdrive
 import music_sync_utils
+import os
+import pickle
 import sync
 import sys
 import usb
@@ -15,10 +17,16 @@ def main():
     drive = GoogleDrive(gauth)
     folder_name = config.load_google_drive_folder_name()
     music_folder = gdrive.get_folder_from_root(drive, folder_name)
-
-    # Initialize GoogleDriveLibrary
-    google_drive_library = gdrive.GoogleDriveLibrary(drive, music_folder)
+    if os.path.isfile('gdl_temp.p'):
+        with open('gdl_temp.p', 'rb') as fp:
+            google_drive_library = pickle.load(fp)
+    else:
+        # Initialize GoogleDriveLibrary
+        google_drive_library = gdrive.GoogleDriveLibrary(drive, music_folder)
     print "Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_library.get_collection_size()/1024/1024, google_drive_library.get_collection_size()/1000/1000/1000)
+
+    with open('gdl_temp.p', 'wb') as fp:
+        pickle.dump(google_drive_library, fp)
 
     # USB Setup
     usb_device_path = config.load_usb_device_path()

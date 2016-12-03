@@ -1,4 +1,5 @@
 # Do the actual sync in this module
+import config
 import gdrive
 import os
 import sys
@@ -133,7 +134,7 @@ def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collecti
                 new_dir_album = os.path.join(new_dir_artist, album_item.name)
                 if not os.path.isdir(new_dir_album):
                     os.mkdir(new_dir_album)
-                print "Going to recursively download album: {0} to path: {1}".format(album_item.name, new_dir_album)
+                print "Going to recursively download album: {0} to path: {1}".format(album_item.name.encode('utf-8'), new_dir_album.encode('utf-8'))
                 gdrive.download_recursive(drive, album_item.drive_file, new_dir_album)
         # Artist downloaded to client machine, now sync
         sync_artist_from_temp_to_usb_and_delete(usb_artist_path, new_dir_artist)
@@ -281,7 +282,13 @@ def get_folders_from_path(path):
 
 def upload_collection_to_gdrive(drive, sync_collection, usb_path, drive_collection):
     for artist_name in sync_collection:
+        if artist_name in drive_collection:
+            drive_artist = drive_collection[artist_name].drive_file
+        else:
+            upload_to = gdrive.get_folder_from_root(drive, config.load_google_drive_folder_name())
+            drive_artist = gdrive.create_folder(drive, artist_name, upload_to['id'])
+
         artist_path = os.path.join(usb_path, artist_name)
         for album_item in sync_collection[artist_name].albums:
             album_path = os.path.join(artist_path, album_item.name)
-            gdrive.upload_album(drive, artist_name, album_path, album_item.name, drive_collection)
+            gdrive.upload_recursive(drive, album_item.name, album_path, drive_artist)

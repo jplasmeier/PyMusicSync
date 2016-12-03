@@ -1,4 +1,5 @@
 from pydrive.auth import GoogleAuth
+import config
 import logger
 import music_sync_utils
 import os
@@ -217,7 +218,7 @@ def download_recursive(drive, folder, download_to):
 
 def download_file(child, download_to):
     download_path = os.path.join(download_to, child['title'])
-    print 'Downloading file {0} to: {1}'.format(child['title'], download_path)
+    print 'Downloading file {0} to: {1}'.format(child['title'].encode('utf-8'), download_path.encode('utf-8'))
     child.GetContentFile(download_path)
     return
 
@@ -238,10 +239,10 @@ def upload_recursive(drive, upload_name, upload_path, upload_to):
         drive_parent = create_folder(drive, upload_name, upload_to['id'])
         for item_name in os.listdir(upload_path):
             item_path = os.path.join(upload_path, item_name)
-            upload_recursive(drive, item_name, item_path, drive_parent['id'])
+            upload_recursive(drive, item_name, item_path, drive_parent)
     else:
         # This is a file. Upload it to the parent folder and return.
-        upload_file(drive, upload_name, upload_path, upload_to['id'])
+        upload_file(drive, upload_name, upload_path, upload_to)
         return
     return
 
@@ -273,11 +274,11 @@ def upload_album(drive, artist_name, album_path, album_name, collection):
     # Using the artist name see if it exists in the cache (on GDrive)
     # If it does, create a folder under it, and upload tracks from album_path
     # Else, Create a folder for the artist name. Then create the album under it and add the tracks
-    if artist_name in collection:
-        drive_artist = collection[artist_name]
+    if collection is not None and artist_name in collection:
+        drive_artist = collection[artist_name].drive_file
     else:
         # we need the root folder of artists for this
-        music_folder = get_folder_from_root(drive, 'Music')
+        music_folder = get_folder_from_root(drive, config.load_google_drive_test_folder_name())
         drive_artist = create_folder(drive, artist_name, music_folder['id'])
     print "Uploading Album: {0} to Artist: {1}".format(album_path, artist_name)
 

@@ -25,6 +25,15 @@ def load_google_drive_folder_name():
     return config_json['google_drive_folder_name']
 
 
+def load_google_drive_test_folder_name():
+    """
+    Get the name of the Google Drive folder to sync with.
+    :return: The name of the Google Drive folder to sync with.
+    """
+    config_json = load_config_json()
+    return config_json['google_drive_test_folder_name']
+
+
 def load_usb_device_path():
     """
     Get the name of the local path to sync with.
