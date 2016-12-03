@@ -10,7 +10,7 @@ class GoogleDriveLibrary(music_sync_utils.MediaLibrary):
     def __init__(self, drive, root_folder_name):
         super(GoogleDriveLibrary, self).__init__()
         self.init_google_drive_collection(drive, root_folder_name)
-        self.clean_unicode()
+        #self.clean_unicode()
 
     def init_google_drive_collection(self, drive, folder):
         """
@@ -62,7 +62,7 @@ class DriveArtistItem(music_sync_utils.ArtistItem):
         if audio_in_artist:
             for audio in audio_in_artist:
                 logger.log_warning("Heads up, you have some audio files directly under an artist: {}".format(audio))
-                print "\rHeads up, you have some audio files directly under an artist: {}".format(audio)
+                print("\rHeads up, you have some audio files directly under an artist: {}".format(audio))
         return drive_albums_added
 
 
@@ -218,7 +218,7 @@ def download_recursive(drive, folder, download_to):
 
 def download_file(child, download_to):
     download_path = os.path.join(download_to, child['title'])
-    print 'Downloading file {0} to: {1}'.format(child['title'].encode('utf-8'), download_path.encode('utf-8'))
+    print('Downloading file {0} to: {1}'.format(child['title'].encode('utf-8'), download_path.encode('utf-8')))
     child.GetContentFile(download_path)
     return
 
@@ -255,7 +255,7 @@ def upload_file(drive, file_name, file_path, parent):
     :param parent: The GoogleDriveFile of the parent
     :return:
     """
-    print 'Uploading file {0} to: {1}'.format(file_path, parent['title'])
+    print('Uploading file {0} to: {1}'.format(file_path, parent['title']))
     new_drive_file = drive.CreateFile({'title': file_name, 'parents': [{'id': parent['id']}]})
     new_drive_file.SetContentFile(file_path)
     new_drive_file.Upload()
@@ -280,20 +280,20 @@ def upload_album(drive, artist_name, album_path, album_name, collection):
         # we need the root folder of artists for this
         music_folder = get_folder_from_root(drive, config.load_google_drive_test_folder_name())
         drive_artist = create_folder(drive, artist_name, music_folder['id'])
-    print "Uploading Album: {0} to Artist: {1}".format(album_path, artist_name)
+    print("Uploading Album: {0} to Artist: {1}".format(album_path, artist_name))
 
     # We now have an Artist Folder, now upload an album folder.
     drive_album = create_folder(drive, album_name, drive_artist['id'])
 
     # Now create tracks under the folder
     for track_file_name in os.listdir(album_path):
-        print "Uploading file: ", track_file_name
+        print("Uploading file: ", track_file_name)
         track_path = os.path.join(album_path, track_file_name)
         if os.path.isdir(track_path):
             sub_dir = create_folder(drive, track_file_name, drive_album['id'])
             for sub_track in os.listdir(track_path):
                 if not os.path.isdir(sub_track):
-                    print "Uploading sub file: ", sub_track
+                    print("Uploading sub file: ", sub_track)
                     sub_track_path = os.path.join(track_path, sub_track)
                     track = drive.CreateFile({'title': sub_track, 'parents': [{'id': sub_dir['id']}]})
                     track.SetContentFile(sub_track_path)

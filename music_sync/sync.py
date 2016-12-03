@@ -16,7 +16,7 @@ def check_df_output():
     try:
         return check_output(["df", "-k"]).split("\n")
     except CalledProcessError as err:
-        print "Error making DF call: {}".format(err)
+        print("Error making DF call: {}".format(err))
         sys.exit(1)
 
 
@@ -63,7 +63,7 @@ def sym_link_artist_from_temp_to_usb_and_delete(artist_path, temp_music_artist_p
         os.mkdir(artist_path)
     # Symlink album from temp to usb
     folder_arguments = ['-s', temp_music_artist_path, artist_path]
-    print 'Symlinking: ', ["ln"] + folder_arguments
+    print('Symlinking: ', ["ln"] + folder_arguments)
     returncode = subprocess.call(["ln"] + folder_arguments)
     # Delete shit
     #delete_arguments = ['-rf', temp_music_artist_path]
@@ -79,7 +79,7 @@ def sync_artist_from_temp_to_usb_and_delete(artist_path, temp_music_artist_path)
         temp_album_path = os.path.join(temp_music_artist_path, album)
         # Sync album from temp to usb
         folder_arguments = ['-r', temp_album_path, artist_path]
-        print 'Syncing: ', ["rsync"] + folder_arguments
+        print('Syncing: ', ["rsync"] + folder_arguments)
         returncode = subprocess.call(["rsync"] + folder_arguments)
     # Delete shit
     delete_arguments = ['-rf', temp_music_artist_path]
@@ -111,9 +111,9 @@ def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collecti
     # If there's enough space, sync
     # Else, Rsync buffer to USB
 
-    print 'Syncing collection to USB Path: ', usb_path
+    print('Syncing collection to USB Path: ', usb_path)
     artist_queue = deque()
-    artist_queue.extend(sync_collection.keys())
+    artist_queue.extend(list(sync_collection.keys()))
     temp_music_dir = os.path.join(MYDIR, 'temp_music')
     if not os.path.isdir(temp_music_dir):
         os.mkdir(temp_music_dir)
@@ -121,20 +121,20 @@ def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collecti
     while artist_queue:
         artist_name = artist_queue.popleft()
         usb_artist_path = os.path.join(usb_path, artist_name)
-        print 'Syncing artist {0} to path {1}'.format(artist_name, usb_artist_path)
+        print('Syncing artist {0} to path {1}'.format(artist_name, usb_artist_path))
         new_dir_artist = os.path.join(temp_music_dir, artist_name)
         if not os.path.isdir(new_dir_artist):
             os.mkdir(new_dir_artist)
         space_on_local = get_free_space_on_local()
         artist_size = drive_collection[artist_name].get_file_size_of_albums() / 1024 / 1024
-        print 'Artist {0} is size {1}.'.format(artist_name, artist_size)
-        print 'We have {0} mb left on local machine.'.format(space_on_local)
+        print('Artist {0} is size {1}.'.format(artist_name, artist_size))
+        print('We have {0} mb left on local machine.'.format(space_on_local))
         if artist_size < space_on_local:
             for album_item in sync_collection[artist_name].albums:
                 new_dir_album = os.path.join(new_dir_artist, album_item.name)
                 if not os.path.isdir(new_dir_album):
                     os.mkdir(new_dir_album)
-                print "Going to recursively download album: {0} to path: {1}".format(album_item.name.encode('utf-8'), new_dir_album.encode('utf-8'))
+                print("Going to recursively download album: {0} to path: {1}".format(album_item.name.encode('utf-8'), new_dir_album.encode('utf-8')))
                 gdrive.download_recursive(drive, album_item.drive_file, new_dir_album)
         # Artist downloaded to client machine, now sync
         sync_artist_from_temp_to_usb_and_delete(usb_artist_path, new_dir_artist)
@@ -179,7 +179,7 @@ def bin_folder(folder_path):
     boundaries = get_character_boundaries(folders)
     # The list of indicies which should end each bin.
     bin_indicies = sorted(get_bin_indicies(boundaries, 0, len(folders)))
-    print 'bin indicies', bin_indicies
+    print('bin indicies', bin_indicies)
 
     # bin_name: [] of names
     bin_dict = {}
@@ -199,12 +199,12 @@ def bin_folder(folder_path):
             lag_char_idx = char_idx+1
 
     for bin_name in bin_dict:
-        print 'Bin: {0} has contents: \n{1}'.format(bin_name, bin_dict[bin_name])
+        print('Bin: {0} has contents: \n{1}'.format(bin_name, bin_dict[bin_name]))
 
     for bin_name in bin_dict:
         # make a directory
         bin_path = os.path.join(folder_path, bin_name)
-        print 'Processing bin at: ', bin_path
+        print('Processing bin at: ', bin_path)
         if not os.path.isdir(bin_path):
             os.mkdir(bin_path)
         for artist_name in bin_dict[bin_name]:
@@ -239,7 +239,7 @@ def get_bin_indicies(boundaries, current_index, last_index, bin_indicies=None):
 
 
 def get_closest_index(boundaries, target_index):
-    boundary_indicies = boundaries.keys()
+    boundary_indicies = list(boundaries.keys())
     closest_val = abs(target_index - boundary_indicies[0])
     closest_key_idx = 0
     for idx in boundaries:
@@ -265,7 +265,7 @@ def get_character_boundaries(items):
             char = item[0].lower()
     boundaries[len(items)] = items[-1:][0][0].lower()
     for idx in boundaries:
-        print 'Index : \'{0}\' is the end of character {1}.'.format(idx, boundaries[idx])
+        print('Index : \'{0}\' is the end of character {1}.'.format(idx, boundaries[idx]))
 
     return boundaries
 

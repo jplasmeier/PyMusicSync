@@ -17,7 +17,7 @@ class USBLibrary(music_sync_utils.MediaLibrary):
         super(USBLibrary, self).__init__(os.path.getmtime(path))
         self.file_path = path
         self.get_usb_collection()
-        self.clean_unicode()
+        #self.clean_unicode()
 
     def get_usb_collection(self):
         """
@@ -79,7 +79,7 @@ def check_df_output():
         # Skip the first item, it's just the headers.
         return check_output(["df", "-k", "-T", "exfat"]).split("\n")[1:]
     except CalledProcessError as err:
-        print "Error making DF call: {}".format(err)
+        print("Error making DF call: {}".format(err))
         sys.exit(1)
 
 
@@ -92,7 +92,7 @@ def get_last_mod_by(artist_path):
     try:
         return os.path.getmtime(artist_path)
     except OSError as err:
-        print 'Artist path no longer exists'
+        print('Artist path no longer exists')
         sys.exit(1)
 
 
@@ -104,7 +104,7 @@ def get_directory_size(album_path):
         else:
             return
     except OSError as err:
-        print 'Directory at {0} no longer exists: {1}'.format(album_path, err)
+        print('Directory at {0} no longer exists: {1}'.format(album_path, err))
         sys.exit(1)
 
 
@@ -122,7 +122,7 @@ def get_folder_names(device_path):
                 folder_paths.append(item_name)
         return folder_paths
     except OSError as err:
-        print "Error accessing USB device: ", err
+        print("Error accessing USB device: ", err)
         sys.exit(1)
 
 
@@ -140,7 +140,7 @@ def get_folder_paths(device_path):
                 folder_paths.append(item_path)
         return folder_paths
     except OSError as err:
-        print "Error accessing USB device: ", err
+        print("Error accessing USB device: ", err)
         sys.exit(1)
 
 

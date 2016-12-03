@@ -154,10 +154,10 @@ class TestSubtractCollectionElements(unittest.TestCase):
         expected_lib = music_sync_utils.MediaLibrary('expected')
         expected_lib.collection = {a5.name: a5}
         actual_result = lib_a.get_subtracted_collection_elements(lib_b)
-        print 'lib a collection', lib_a.collection['The Monday Mornings'].albums
-        print 'lib b collection', lib_b.collection['The Monday Mornings'].albums
-        print 'expected collection', expected_lib.collection['The Monday Mornings'].albums
-        print 'actual collection', actual_result.collection['The Monday Mornings'].albums
+        print('lib a collection', lib_a.collection['The Monday Mornings'].albums)
+        print('lib b collection', lib_b.collection['The Monday Mornings'].albums)
+        print('expected collection', expected_lib.collection['The Monday Mornings'].albums)
+        print('actual collection', actual_result.collection['The Monday Mornings'].albums)
         self.assertEqual(expected_lib.collection, actual_result.collection)
         for artist_name in actual_result.collection:
             self.assertEqual(actual_result.collection[artist_name], expected_lib.collection[artist_name])
