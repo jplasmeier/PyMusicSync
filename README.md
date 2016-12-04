@@ -14,7 +14,7 @@ This software is currently in pre-Alpha and will almost certainly not work on yo
 ### Running PyMusicSync
 
 * Install requirements from requirements.txt
-* python2.7 music\_sync/music\_sync.py
+* python music\_sync/music\_sync.py
 
 Currently the Google Drive folder containing your files is hardcoded so you probably want to change it.
 The directory structure is hard coded as well. I'm working on fixing this eventually to be more abstract.
