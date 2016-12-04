@@ -2,7 +2,7 @@
 # A module to find and save USB device information on a Mac.
 # Author: J. Plasmeier | jplasmeier@gmail.com
 # License: MIT License
-from subprocess import check_output, CalledProcessError
+from subprocess import check_output, CalledProcessError, getoutput
 import logger
 import music_sync_utils
 import os
@@ -17,7 +17,6 @@ class USBLibrary(music_sync_utils.MediaLibrary):
         super(USBLibrary, self).__init__(os.path.getmtime(path))
         self.file_path = path
         self.get_usb_collection()
-        #self.clean_unicode()
 
     def get_usb_collection(self):
         """
@@ -56,7 +55,7 @@ class DFDevice:
         self.filesystem = df_tokens[0]
         self.size = df_tokens[1]
         self.used = df_tokens[2]
-        self.avail = df_tokens[3]
+        self.avail = int(df_tokens[3])
         self.capacity = df_tokens[4]
         self.iused = df_tokens[5]
         self.ifree = df_tokens[6]
@@ -77,14 +76,14 @@ class DFDevice:
 def check_df_output():
     try:
         # Skip the first item, it's just the headers.
-        return check_output(["df", "-k", "-T", "exfat"]).split("\n")[1:]
+        return getoutput("df -k -T exfat").split("\n")[1:]
     except CalledProcessError as err:
         print("Error making DF call: {}".format(err))
         sys.exit(1)
 
 
 # os calls
-# we ensure that file paths still exist in case we are on a flaky NFS
+# we ensure that file paths still exist in case we are on a flaky FS
 
 
 # ship
@@ -92,7 +91,7 @@ def get_last_mod_by(artist_path):
     try:
         return os.path.getmtime(artist_path)
     except OSError as err:
-        print('Artist path no longer exists')
+        print('Artist path {0} no longer exists: {1}'.format(artist_path, err))
         sys.exit(1)
 
 

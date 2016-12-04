@@ -3,8 +3,7 @@ import config
 import gdrive
 import os
 import sys
-import subprocess
-from subprocess import check_output, CalledProcessError
+from subprocess import getoutput, CalledProcessError, call
 from collections import deque, OrderedDict
 
 BIN_SIZE = 40
@@ -14,7 +13,7 @@ boot_disc_path = '/dev/disk1'
 
 def check_df_output():
     try:
-        return check_output(["df", "-k"]).split("\n")
+        return getoutput("df -k").split("\n")
     except CalledProcessError as err:
         print("Error making DF call: {}".format(err))
         sys.exit(1)
@@ -64,7 +63,7 @@ def sym_link_artist_from_temp_to_usb_and_delete(artist_path, temp_music_artist_p
     # Symlink album from temp to usb
     folder_arguments = ['-s', temp_music_artist_path, artist_path]
     print('Symlinking: ', ["ln"] + folder_arguments)
-    returncode = subprocess.call(["ln"] + folder_arguments)
+    returncode = call(["ln"] + folder_arguments)
     # Delete shit
     #delete_arguments = ['-rf', temp_music_artist_path]
     #returncode2 = subprocess.call(["rm"] + delete_arguments)
@@ -80,10 +79,10 @@ def sync_artist_from_temp_to_usb_and_delete(artist_path, temp_music_artist_path)
         # Sync album from temp to usb
         folder_arguments = ['-r', temp_album_path, artist_path]
         print('Syncing: ', ["rsync"] + folder_arguments)
-        returncode = subprocess.call(["rsync"] + folder_arguments)
+        returncode = call(["rsync"] + folder_arguments)
     # Delete shit
     delete_arguments = ['-rf', temp_music_artist_path]
-    returncode2 = subprocess.call(["rm"] + delete_arguments)
+    returncode2 = call(["rm"] + delete_arguments)
     return
 
 
@@ -92,7 +91,7 @@ def delete_folder(folder=None):
     if folder is None:
         folder = os.path.join(MYDIR, 'temp_music')
     delete_arguments = ['-rf', folder]
-    return subprocess.call(["rm"] + delete_arguments)
+    return call(["rm"] + delete_arguments)
 
 
 def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collection):
@@ -134,7 +133,7 @@ def buffered_sync_gdrive_to_usb(drive, sync_collection, usb_path, drive_collecti
                 new_dir_album = os.path.join(new_dir_artist, album_item.name)
                 if not os.path.isdir(new_dir_album):
                     os.mkdir(new_dir_album)
-                print("Going to recursively download album: {0} to path: {1}".format(album_item.name.encode('utf-8'), new_dir_album.encode('utf-8')))
+                print("Going to recursively download album: {0} to path: {1}".format(album_item.name, new_dir_album))
                 gdrive.download_recursive(drive, album_item.drive_file, new_dir_album)
         # Artist downloaded to client machine, now sync
         sync_artist_from_temp_to_usb_and_delete(usb_artist_path, new_dir_artist)

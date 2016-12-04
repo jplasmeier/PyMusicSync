@@ -10,7 +10,6 @@ class GoogleDriveLibrary(music_sync_utils.MediaLibrary):
     def __init__(self, drive, root_folder_name):
         super(GoogleDriveLibrary, self).__init__()
         self.init_google_drive_collection(drive, root_folder_name)
-        #self.clean_unicode()
 
     def init_google_drive_collection(self, drive, folder):
         """
@@ -35,10 +34,18 @@ class GoogleDriveLibrary(music_sync_utils.MediaLibrary):
         return self
 
 
+def clean_unicode_title(drive_file):
+    clean_name = clean_unicode(drive_file['title'])
+    if clean_name != drive_file['title']:
+        drive_file['title'] = clean_name
+        drive_file.Upload()
+    return clean_name
+
+
 class DriveArtistItem(music_sync_utils.ArtistItem):
     def __init__(self, name, drive_file):
-        super(DriveArtistItem, self).__init__(name)
         self.drive_file = drive_file
+        super(DriveArtistItem, self).__init__(name)
 
     def get_albums_for_artist(self, drive, drive_artist):
         """
@@ -51,7 +58,7 @@ class DriveArtistItem(music_sync_utils.ArtistItem):
         drive_albums_added = []
         drive_albums = list_folder(drive, drive_artist['id'])
         for drive_album in drive_albums:
-            drive_album_name = drive_album['title']
+            drive_album_name = clean_unicode_title(drive_album)
             if drive_album_name not in self.albums and get_file_ext_type(drive_album) is 'folder':
                 album_size = get_album_size_drive(drive, drive_album['id'])
                 new_album = DriveAlbumItem(drive_album_name, album_size, drive_album)
@@ -216,9 +223,32 @@ def download_recursive(drive, folder, download_to):
     return
 
 
+def clean_unicode(name):
+    """
+    Clean bad unicode strings from Drive and upload the change.
+    Currently this means adding combining marks to reflect the directory name upon directory creation.
+    :param name: The name to clean
+    :return: The clean name
+    """
+    if "Uppror" in name:
+        print(name)
+    if u"\u00E4" in name or u"\u00E1" in name:
+        temp_unicode_dir_path = os.path.join(os.path.curdir, 'temp_unicode_dir')
+        if not os.path.isdir(temp_unicode_dir_path):
+            os.mkdir(temp_unicode_dir_path)
+        dirty_path = os.path.join(temp_unicode_dir_path, name)
+        if not os.path.isdir(dirty_path):
+            os.mkdir(dirty_path)
+        clean_name = os.listdir(temp_unicode_dir_path).pop()
+        os.rmdir(dirty_path)
+        return clean_name
+    else:
+        return name
+
+
 def download_file(child, download_to):
     download_path = os.path.join(download_to, child['title'])
-    print('Downloading file {0} to: {1}'.format(child['title'].encode('utf-8'), download_path.encode('utf-8')))
+    print('Downloading file {0} to: {1}'.format(child['title'], download_path))
     child.GetContentFile(download_path)
     return
 
@@ -230,7 +260,8 @@ def upload_recursive(drive, upload_name, upload_path, upload_to):
     """
     Given a Drive folder, recursively download that folder and it's children
     :param drive: The drive object
-    :param upload_path: The path of the content to upload
+    :param upload_name: The name of the object
+    :param upload_path: The path of the object to upload
     :param upload_to: The GoogleDriveFile to upload to
     :return: None
     """

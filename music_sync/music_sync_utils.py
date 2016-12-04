@@ -9,7 +9,7 @@ imp.reload(sys)
 class NameEqualityMixin(object):
 
     def __eq__(self, other):
-        if isinstance(other, unicode):
+        if isinstance(other, str):
             return self.name == other
         return self.name == other.name
 
@@ -43,20 +43,6 @@ class MediaLibrary(object):
                 s.append("---- Album: {}\n".format(album_item.name))
         return str(s)
 
-    def clean_unicode(self):
-        clean_collection = {}
-        for artist_name in self.collection:
-            clean_artist_name = codecs.utf_8_decode(artist_name.encode('utf-8'))[0]
-            clean_collection[clean_artist_name] = copy.deepcopy(self.collection[artist_name])
-            clean_collection[clean_artist_name].albums = []
-            for album in self.collection[artist_name].albums:
-                clean_album_name = codecs.utf_8_decode(album.name.encode('utf-8'))[0]
-                new_album_item = copy.deepcopy(album)
-                new_album_item.name = clean_album_name
-                clean_collection[clean_artist_name].albums.append(new_album_item)
-        self.collection = clean_collection
-        return self
-
     def get_subtracted_collection_elements(self, library_b):
         """
         RETURN Subtract B from A by set subtraction on collection objects.
@@ -81,13 +67,13 @@ class MediaLibrary(object):
 class CollectionItem(NameEqualityMixin):
 
     def __init__(self, name, etag=None):
-        if not isinstance(name, unicode):
+        if not isinstance(name, str):
             raise Exception("You set the name to {0}  which is type: {1} not a string".format(name, type(name)))
         self.name = name
         self.etag = etag
 
     def __str__(self):
-        if not isinstance(self.name, unicode):
+        if not isinstance(self.name, str):
             raise Exception("You set the name to {0}  which is type: {1} not a string".format(self.name, type(self.name)))
         return self.name
 
@@ -163,7 +149,7 @@ def print_collection(collection):
     for artist in collection:
         print("Artist:", artist)
         for album in collection[artist].albums:
-            print("-----Album: ", album.name.encode('utf-8'))
+            print("-----Album: ", album.name)
 
 
 def get_difference(album, artist_name, missing_from_usb):
@@ -171,7 +157,7 @@ def get_difference(album, artist_name, missing_from_usb):
         return
     for usb_album in missing_from_usb.collection[artist_name].albums:
         if check_duplicate_string(usb_album.name, album.name):
-            print('False Positive detected! {0} and {1} are actually the same'.format(usb_album.name.encode('utf-8'), album.name.encode('utf-8')))
+            print('False Positive detected! {0} and {1} are actually the same'.format(usb_album.name, album.name))
             return
     return album
 
@@ -218,8 +204,8 @@ def check_duplicate_string(s1, s2):
     """
     words_s1 = s1.split(' ')
     words_s2 = s2.split(' ')
-    s1 = ' '.join(w for w in words_s1 if w not in words_s2).encode('utf-8')
-    s2 = ' '.join(w for w in words_s2 if w not in words_s1).encode('utf-8')
+    s1 = ' '.join(w for w in words_s1 if w not in words_s2)
+    s2 = ' '.join(w for w in words_s2 if w not in words_s1)
     chars_s1 = {}
     chars_s2 = {}
     for c in str(s1):
