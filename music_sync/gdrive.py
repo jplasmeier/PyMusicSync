@@ -1,5 +1,4 @@
 from pydrive.auth import GoogleAuth
-import config
 import logger
 import music_sync_utils
 import os
@@ -60,8 +59,7 @@ class DriveArtistItem(music_sync_utils.ArtistItem):
         for drive_album in drive_albums:
             drive_album_name = clean_unicode_title(drive_album)
             if drive_album_name not in self.albums and get_file_ext_type(drive_album) is 'folder':
-                album_size = get_album_size_drive(drive, drive_album['id'])
-                new_album = DriveAlbumItem(drive_album_name, album_size, drive_album)
+                new_album = DriveAlbumItem(drive, drive_album_name, drive_album)
                 self.albums.append(new_album)
                 drive_albums_added.append(drive_album)
             elif get_file_ext_type(drive_album) is 'audio':
@@ -74,9 +72,9 @@ class DriveArtistItem(music_sync_utils.ArtistItem):
 
 
 class DriveAlbumItem(music_sync_utils.AlbumItem):
-    def __init__(self, name, file_size, drive_file):
-        super(DriveAlbumItem, self).__init__(name, file_size)
-        self.drive_file = drive_file
+    def __init__(self, drive, name, drive_file):
+        file_size = get_folder_size_drive(drive, drive_file['id'])
+        super(DriveAlbumItem, self).__init__(name, file_size, drive_file)
 
 
 # Drive Utilities
@@ -135,14 +133,13 @@ def get_folder_from_root(drive, file_title):
             return file1
 
 
-# TODO: Implement
-def get_root_folder(drive):
+def get_folders_from_root(drive):
     """
-    Returns the GoogleDriveFile of the root.
+    Returns the files in your root Google Drive directory
     :param drive:
     :return:
     """
-    raise NotImplementedError
+    return drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
 
 
 def get_file_ext_type(drive_file):
@@ -163,28 +160,7 @@ def get_file_ext_type(drive_file):
         return 'other'
 
 
-def list_folder(drive, folder_id):
-    """
-    Lists contents of a GoogleDriveFile that is a folder
-    :param drive: Drive object to use for getting folders
-    :param folder_id: The id of the GoogleDriveFile
-    :return: The GoogleDriveList of folders
-    """
-    _q = {'q': "'{}' in parents and trashed=false".format(folder_id)}
-    return drive.ListFile(_q).GetList()
-
-
-# TODO: Bind this method to the DriveArtist class
-def get_artist_size(drive, artist):
-    albums = list_folder(drive, artist['id'])
-    size = 0
-    for album in albums:
-        size += int(album['quotaBytesUsed'])
-    return size
-
-
-# TODO: Bind this method to the DriveAlbum class
-def get_album_size_drive(drive, album_id):
+def get_folder_size_drive(drive, album_id):
     """
     Gets the size of an album in Drive.
     album_id: string containing GoogleDriveFile id of an album_id folder
@@ -196,6 +172,17 @@ def get_album_size_drive(drive, album_id):
         if file_size is not None:
             size += file_size
     return size
+
+
+def list_folder(drive, folder_id):
+    """
+    Lists contents of a GoogleDriveFile that is a folder
+    :param drive: Drive object to use for getting folders
+    :param folder_id: The id of the GoogleDriveFile
+    :return: The GoogleDriveList of folders
+    """
+    _q = {'q': "'{}' in parents and trashed=false".format(folder_id)}
+    return drive.ListFile(_q).GetList()
 
 
 # Download
@@ -230,8 +217,6 @@ def clean_unicode(name):
     :param name: The name to clean
     :return: The clean name
     """
-    if "Uppror" in name:
-        print(name)
     if u"\u00E4" in name or u"\u00E1" in name:
         temp_unicode_dir_path = os.path.join(os.path.curdir, 'temp_unicode_dir')
         if not os.path.isdir(temp_unicode_dir_path):
@@ -255,7 +240,7 @@ def download_file(child, download_to):
 
 # Upload
 
-# TODO: Test and then use to upload instead.
+
 def upload_recursive(drive, upload_name, upload_path, upload_to):
     """
     Given a Drive folder, recursively download that folder and it's children
@@ -291,49 +276,6 @@ def upload_file(drive, file_name, file_path, parent):
     new_drive_file.SetContentFile(file_path)
     new_drive_file.Upload()
     return
-
-
-# TODO: Deprecate and remove once recursive version is done.
-def upload_album(drive, artist_name, album_path, album_name, collection):
-    """
-    Upload an album to Google Drive.
-    :param drive
-    :param artist_name
-    :param album_path
-    :param album_name
-    """
-    # Using the artist name see if it exists in the cache (on GDrive)
-    # If it does, create a folder under it, and upload tracks from album_path
-    # Else, Create a folder for the artist name. Then create the album under it and add the tracks
-    if collection is not None and artist_name in collection:
-        drive_artist = collection[artist_name].drive_file
-    else:
-        # we need the root folder of artists for this
-        music_folder = get_folder_from_root(drive, config.load_google_drive_test_folder_name())
-        drive_artist = create_folder(drive, artist_name, music_folder['id'])
-    print("Uploading Album: {0} to Artist: {1}".format(album_path, artist_name))
-
-    # We now have an Artist Folder, now upload an album folder.
-    drive_album = create_folder(drive, album_name, drive_artist['id'])
-
-    # Now create tracks under the folder
-    for track_file_name in os.listdir(album_path):
-        print("Uploading file: ", track_file_name)
-        track_path = os.path.join(album_path, track_file_name)
-        if os.path.isdir(track_path):
-            sub_dir = create_folder(drive, track_file_name, drive_album['id'])
-            for sub_track in os.listdir(track_path):
-                if not os.path.isdir(sub_track):
-                    print("Uploading sub file: ", sub_track)
-                    sub_track_path = os.path.join(track_path, sub_track)
-                    track = drive.CreateFile({'title': sub_track, 'parents': [{'id': sub_dir['id']}]})
-                    track.SetContentFile(sub_track_path)
-                    track.Upload()
-        else:
-            track = drive.CreateFile({'title': track_file_name, 'parents': [{'id': drive_album['id']}]})
-            track.SetContentFile(track_path)
-            track.Upload()
-    return drive_album
 
 
 def create_folder(drive, folder_name, parent_id):

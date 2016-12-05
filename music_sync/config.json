@@ -1,5 +1,6 @@
 {
-    "google_drive_folder_name": "Music",
-    "usb_device_path": "/Volumes/Untitled",
-    "google_drive_test_folder_name": "Music_Test_Small"
+  "google_drive_folder_name": "Music",
+  "usb_device_path": "/Volumes/Untitled",
+  "google_drive_test_folder_name": "Music_Test_Small",
+  "boot_disk_path": "/dev/disk1"
 }

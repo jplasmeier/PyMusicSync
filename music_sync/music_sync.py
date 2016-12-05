@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from pydrive.drive import GoogleDrive
 import config
 import gdrive
@@ -6,10 +5,10 @@ import music_sync_utils
 import os
 import pickle
 import sync
-import sys
 import usb
-import imp
-imp.reload(sys)
+
+
+cache_drive = True
 
 
 def main():
@@ -18,9 +17,11 @@ def main():
     drive = GoogleDrive(gauth)
     folder_name = config.load_google_drive_folder_name()
     music_folder = gdrive.get_folder_from_root(drive, folder_name)
-    if os.path.isfile('gdl_temp.p'):
-        with open('gdl_temp.p', 'rb') as fp:
-            google_drive_library = pickle.load(fp)
+
+    if cache_drive is True:
+        if os.path.isfile('gdl_temp.p'):
+            with open('gdl_temp.p', 'rb') as fp:
+                google_drive_library = pickle.load(fp)
     else:
         # Initialize GoogleDriveLibrary
         google_drive_library = gdrive.GoogleDriveLibrary(drive, music_folder)
@@ -44,10 +45,13 @@ def main():
 
     missing_from_drive_less = music_sync_utils.find_duplicate_albums(missing_from_usb, missing_from_drive)
 
-    print("The following are missing from your USB device")
-    music_sync_utils.print_collection(missing_from_usb.collection)
-    print("The following are missing from your Drive")
-    music_sync_utils.print_collection(missing_from_drive_less.collection)
+    if missing_from_usb.collection:
+        print("The following are missing from your USB device")
+        print(missing_from_usb)
+
+    if missing_from_drive_less.collection:
+        print("The following are missing from your Drive")
+        print(missing_from_drive_less)
 
     gdrive_sync_size = missing_from_usb.get_collection_size()
     print('Size of GDrive files to be added (mb): ', gdrive_sync_size)
@@ -61,8 +65,9 @@ def main():
     print("Free space on PC  (mb)", free_space_pc)
     sync.buffered_sync_gdrive_to_usb(drive, missing_from_usb.collection, usb_music_library.file_path, google_drive_library.collection)
 
-    print('Upload to Drive')
-    sync.upload_collection_to_gdrive(drive, missing_from_drive_less.collection, usb_music_library.file_path, google_drive_library.collection)
+    if missing_from_drive_less.collection:
+        print('Uploading to Drive')
+        sync.upload_collection_to_gdrive(drive, missing_from_drive_less.collection, usb_music_library.file_path, google_drive_library.collection)
 
 if __name__ == '__main__':
     main() 

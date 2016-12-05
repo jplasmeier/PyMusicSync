@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 # Utilities for MusicSync
-import codecs
 import copy
-import sys
-import imp
-imp.reload(sys)
+
 
 class NameEqualityMixin(object):
 
@@ -109,40 +105,6 @@ class AlbumItem(CollectionItem):
 
     def __str__(self):
         return self.name
-
-
-def check_drive_not_in_usb_collection(drive_collection, usb_collection):
-    missing_from_usb_collection = {}
-    for artist in drive_collection:
-        if artist not in usb_collection:
-            # TODO: investigate performance of caching lookup (save the list locally instead of looking up artist again)
-            missing_from_usb_collection[artist] = []
-            for album in drive_collection[artist]:
-                missing_from_usb_collection[artist].append(album)
-        else:
-            for album in drive_collection[artist]:
-                if album not in usb_collection[artist]:
-                    if artist not in missing_from_usb_collection:
-                        missing_from_usb_collection[artist] = []
-                    missing_from_usb_collection[artist].append(album)
-    return missing_from_usb_collection
-
-
-def check_usb_not_in_drive_collection(drive_collection, usb_collection):
-    missing_from_drive_collection = {}
-    for artist in usb_collection:
-        if artist not in drive_collection:
-            missing_from_drive_collection[artist] = []
-            # TODO: investigate performance of caching lookup (save the list locally instead of looking up artist again)
-            for album in usb_collection[artist]:
-                missing_from_drive_collection[artist].append(album)
-        else:
-            for album in usb_collection[artist]:
-                if album not in drive_collection[artist]:
-                    if artist not in missing_from_drive_collection:
-                        missing_from_drive_collection[artist] = []
-                    missing_from_drive_collection[artist].append(album)
-    return missing_from_drive_collection
 
 
 def print_collection(collection):

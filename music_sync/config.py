@@ -16,6 +16,15 @@ usb_device_sn (from IOREG)
 CONFIG_FILE = 'config.json'
 
 
+def load_boot_disk_path():
+    """
+    Get the path of the OS disk
+    :return: The path of the OS disk
+    """
+    config_json = load_config_json()
+    return config_json['boot_disk_path']
+
+
 def load_google_drive_folder_name():
     """
     Get the name of the Google Drive folder to sync with.
@@ -41,6 +50,7 @@ def load_usb_device_path():
     """
     config_json = load_config_json()
     return config_json['usb_device_path']
+
 
 def load_config_json():
     with open(CONFIG_FILE) as cfg:

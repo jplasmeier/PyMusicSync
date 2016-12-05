@@ -8,7 +8,7 @@ from collections import deque, OrderedDict
 
 BIN_SIZE = 40
 MYDIR = os.path.dirname(__file__)
-boot_disc_path = '/dev/disk1'
+boot_disc_path = config.load_boot_disk_path()
 
 
 def check_df_output():
@@ -25,36 +25,6 @@ def get_free_space_on_local():
         tokens = line.split()
         if tokens[0] == boot_disc_path:
             return int(tokens[3]) / 1024
-
-
-def get_size_of_syncing_collection(sync_collection, drive_collection):
-    """
-    Gets the size of the files to be sync'd.
-    :param sync_collection: The albums to sync.
-    :param drive_collection: The whole Google Drive collection
-    :return:
-    """
-    gdrive_sync_size = 0
-    for gdrive_artist in sync_collection:
-        gdrive_sync_size += drive_collection[gdrive_artist].get_file_size_of_albums()
-
-    gdrive_sync_size = gdrive_sync_size / 1024.0 / 1024.0
-    return gdrive_sync_size
-
-
-# TODO: Remove. Can just use sync_collection directly...
-def get_gdrive_artists_from_collection(sync_collection, drive_collection):
-    """
-    This skips the ArtistItem and Album objects and returns a dict of artist_name: [drive_album] kvps.
-    :param sync_collection: The collection of things to sync of artist_name: ArtistItem kvps
-    :param drive_collection: The collection of artist_name: ArtistItem kvps.
-    :return:
-    """
-    gdrive_artists = {}
-    for artist_name in sync_collection:
-        # find the folder with this name
-        gdrive_artists[artist_name] = [a.drive_file for a in drive_collection[artist_name].albums]
-    return gdrive_artists
 
 
 def sym_link_artist_from_temp_to_usb_and_delete(artist_path, temp_music_artist_path):

@@ -2,7 +2,7 @@
 # A module to find and save USB device information on a Mac.
 # Author: J. Plasmeier | jplasmeier@gmail.com
 # License: MIT License
-from subprocess import check_output, CalledProcessError, getoutput
+from subprocess import CalledProcessError, getoutput
 import logger
 import music_sync_utils
 import os
@@ -72,7 +72,6 @@ class DFDevice:
 # check_output calls
 
 
-# ship
 def check_df_output():
     try:
         # Skip the first item, it's just the headers.
@@ -86,7 +85,6 @@ def check_df_output():
 # we ensure that file paths still exist in case we are on a flaky FS
 
 
-# ship
 def get_last_mod_by(artist_path):
     try:
         return os.path.getmtime(artist_path)
@@ -95,7 +93,6 @@ def get_last_mod_by(artist_path):
         sys.exit(1)
 
 
-# ship
 def get_directory_size(album_path):
     try:
         if os.path.isdir(album_path):
@@ -107,7 +104,6 @@ def get_directory_size(album_path):
         sys.exit(1)
 
 
-# ship
 def get_folder_names(device_path):
     try:
         folder_paths = []
@@ -125,7 +121,6 @@ def get_folder_names(device_path):
         sys.exit(1)
 
 
-# ship
 def get_folder_paths(device_path):
     try:
         folder_paths = []
