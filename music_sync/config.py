@@ -1,57 +1,62 @@
 # config.py
 # Configuration module for Mass Media Sync.
-import json
-
-"""
-Config JSON Schema:
-
-google_drive_secret (?)
-google_drive_folder_name
-
-usb_device_path
-usb_device_sn (from IOREG)
-
-"""
-
-CONFIG_FILE = 'config.json'
 
 
 def load_boot_disk_path():
-    """
-    Get the path of the OS disk
-    :return: The path of the OS disk
-    """
-    config_json = load_config_json()
-    return config_json['boot_disk_path']
+    return "/dev/disk1"
+
+
+def load_general_cache_path():
+    return "general_cache.p"
+
+
+def load_general_drive_folder_name():
+    return "Media"
+
+
+def load_general_usb_device_path():
+    return "/Users/jgp/Documents/temp"
 
 
 def load_google_drive_folder_name():
-    """
-    Get the name of the Google Drive folder to sync with.
-    :return: The name of the Google Drive folder to sync with.
-    """
-    config_json = load_config_json()
-    return config_json['google_drive_folder_name']
+    return "Music"
 
 
 def load_google_drive_test_folder_name():
+    return "Music_Test_Small"
+
+
+def load_mode():
     """
-    Get the name of the Google Drive folder to sync with.
-    :return: The name of the Google Drive folder to sync with.
+    trad, genenral
+    :return:
     """
-    config_json = load_config_json()
-    return config_json['google_drive_test_folder_name']
+    return "general"
+
+
+def load_option_cache():
+    return True
+
+
+def load_option_clean_unicode():
+    return False
+
+
+def load_option_delete():
+    return False
+
+
+def load_sync_mode():
+    """
+    one-way, two-way
+    :return:
+    """
+    return "two-way"
+
+
+def load_trad_cache_path():
+    return "trad_cache.p"
 
 
 def load_usb_device_path():
-    """
-    Get the name of the local path to sync with.
-    :return: The name of the local path to sync with.
-    """
-    config_json = load_config_json()
-    return config_json['usb_device_path']
-
-
-def load_config_json():
-    with open(CONFIG_FILE) as cfg:
-        return json.load(cfg)
+    return "/Volumes/Untitled"

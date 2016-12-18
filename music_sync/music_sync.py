@@ -1,33 +1,30 @@
 from pydrive.drive import GoogleDrive
 import config
 import gdrive
+import gdrive_folder
+import gdrive_library
 import music_sync_utils
 import os
 import pickle
 import sync
 import usb
 
+cache_drive = config.load_option_cache()
 
-cache_drive = True
 
+def trad(drive, music_folder):
+    print("Traditional sync mode selected.")
+    cache_path = config.load_trad_cache_path()
 
-def main():
-    # Drive Setup
-    gauth = gdrive.login()
-    drive = GoogleDrive(gauth)
-    folder_name = config.load_google_drive_folder_name()
-    music_folder = gdrive.get_folder_from_root(drive, folder_name)
-
-    if cache_drive is True:
-        if os.path.isfile('gdl_temp.p'):
-            with open('gdl_temp.p', 'rb') as fp:
-                google_drive_library = pickle.load(fp)
+    if cache_drive is True and os.path.isfile(cache_path):
+        with open(cache_path, 'rb') as fp:
+            google_drive_library = pickle.load(fp)
     else:
         # Initialize GoogleDriveLibrary
-        google_drive_library = gdrive.GoogleDriveLibrary(drive, music_folder)
+        google_drive_library = gdrive_library.GoogleDriveLibrary(drive, music_folder)
     print("Your Drive music takes up {0} Mib, {1} Gb of space.".format(google_drive_library.get_collection_size()/1024/1024, google_drive_library.get_collection_size()/1000/1000/1000))
 
-    with open('gdl_temp.p', 'wb') as fp:
+    with open(cache_path, 'wb') as fp:
         pickle.dump(google_drive_library, fp)
 
     # USB Setup
@@ -68,6 +65,65 @@ def main():
     if missing_from_drive_less.collection:
         print('Uploading to Drive')
         sync.upload_collection_to_gdrive(drive, missing_from_drive_less.collection, usb_music_library.file_path, google_drive_library.collection)
+
+
+def general(drive, music_folder):
+    """
+    A more general approach to syncing.
+    Instead of forcing Library => Artist => Albums => content
+    Just use a generic recursive diff/sync.
+    :return:
+    """
+    print("General sync mode selected.")
+    cache_path = config.load_general_cache_path()
+
+    if cache_drive is True and os.path.isfile(cache_path):
+        with open(cache_path, 'rb') as fp:
+            google_drive_folder = pickle.load(fp)
+    else:
+        google_drive_folder = gdrive_folder.build_folder(drive, music_folder)
+
+    with open(cache_path, 'wb') as fp:
+        pickle.dump(google_drive_folder, fp)
+    print("Google Drive Folder: ", google_drive_folder)
+
+    usb_folder = usb.build_folder(config.load_general_usb_device_path())
+    print("USB Folder: ", usb_folder)
+
+    sync_mode = config.load_sync_mode()
+    clean_unicode = config.load_option_clean_unicode()
+    delete = config.load_option_delete()
+
+    if sync_mode == "one-way":
+        source = google_drive_folder
+        destination = usb_folder
+        if delete:
+            sync.one_way_delete(source, destination)
+        else:
+            sync.one_way(source, destination, clean_unicode)
+    elif sync_mode == "two-way":
+        sources = [google_drive_folder, usb_folder]
+        sync.two_way(sources, clean_unicode)
+
+
+def main():
+    # Load from config
+    mode = config.load_mode()
+    if mode == "trad":
+        folder_name = config.load_google_drive_folder_name()
+    elif mode == "general":
+        folder_name = config.load_general_drive_folder_name()
+    else:
+        raise Exception("Invalid Mode")
+    # Drive Setup
+    gauth = gdrive.login()
+    drive = GoogleDrive(gauth)
+    music_folder = gdrive.get_folder_from_root(drive, folder_name)
+
+    if mode == "trad":
+        trad(drive, music_folder)
+    elif mode == "general":
+        general(drive, music_folder)
 
 if __name__ == '__main__':
     main() 

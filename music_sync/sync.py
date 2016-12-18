@@ -1,14 +1,89 @@
 # Do the actual sync in this module
 import config
 import gdrive
+import gdrive_folder
+import general_sync_utils
 import os
 import sys
+import usb
 from subprocess import getoutput, CalledProcessError, call
 from collections import deque, OrderedDict
 
 BIN_SIZE = 40
 MYDIR = os.path.dirname(__file__)
 boot_disc_path = config.load_boot_disk_path()
+
+
+# General Sync
+
+def one_way(source, destination, clean_unicode):
+    pass
+
+
+def one_way_delete(source, destination, clean_unicode):
+    pass
+
+
+def two_way(sources, clean_unicode):
+    """
+    Omni-directional sync across two or more devices.
+    Sets each device equal to the union of all devices.
+    First we construct the union.
+    Then we diff each device against the union.
+    Then, copy the difference from the union to that device.
+    :param sources: A list of general_sync_utils.Folder objects.
+    :param clean_unicode: If true, clean unicode names on Drive folders/files.
+    :return: The union? Maybe a status code?
+    """
+    union_folder = union(sources)
+
+
+def two_way_delete(sources, clean_unicode):
+    pass
+
+
+def union(folders):
+    """
+    Given a list of folders, that is, general_sync_utils.Folder objects
+    Return the union of all folders.
+    :param folders: A list of general_sync_utils.Folder objects
+    :return:
+    """
+    # We allow devices to have different roots. Keep the contents of each root in Union Root.
+    union_root = general_sync_utils.Folder("Union Root")
+    for root in folders:
+        # Omit the root folder
+        for folder in root.contents:
+            union_root = add_contents_recursive(union_root, folder)
+
+
+def add_contents_recursive(destination, source):
+    """
+    Add the contents of source to destination, recursively.
+    :param destination:
+    :param source:
+    :return:
+    """
+    if isinstance(source, general_sync_utils.File):
+        if source not in destination.contents:
+            print("Adding file: ", source.name)
+            destination.contents.append(source)
+        return destination
+    else:
+        if source not in destination.contents:
+            print("Processing Folder: ", source.name)
+            new_folder = general_sync_utils.Folder(source.name)
+            destination.contents.append(new_folder)
+            for item in source.contents:
+                add_contents_recursive(new_folder, item)
+            return destination
+        else:
+            source_in_destination, = [d for d in destination.contents if d.name == source.name]
+            for item in source.contents:
+                add_contents_recursive(source_in_destination, item)
+            return destination
+
+# Legacy Sync
 
 
 def check_df_output():
@@ -129,6 +204,7 @@ def unbin_folder(folder_path):
             old_artist_path = os.path.join(bin_path, artist_name)
             sym_link_artist_from_temp_to_usb_and_delete(new_artist_path, old_artist_path)
         delete_folder(bin_path)
+
 
 def bin_folder(folder_path):
     """

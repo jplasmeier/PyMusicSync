@@ -3,6 +3,7 @@
 # Author: J. Plasmeier | jplasmeier@gmail.com
 # License: MIT License
 from subprocess import CalledProcessError, getoutput
+import general_sync_utils
 import logger
 import music_sync_utils
 import os
@@ -45,6 +46,42 @@ class USBAlbumItem(music_sync_utils.AlbumItem):
     def __init__(self, album_name, album_path):
         file_size = get_directory_size(album_path)
         super(USBAlbumItem, self).__init__(album_name, file_size)
+
+
+class USBFolder(general_sync_utils.Folder):
+
+    def __init__(self, path):
+        name = os.path.basename(path)
+        super(USBFolder, self).__init__(name)
+        self.path = path
+
+
+class USBFile(general_sync_utils.File):
+
+    def __init__(self, path):
+        if os.path.isdir(path):
+            raise os.error("Error: cannot create file from directory, silly")
+        name = os.path.basename(path)
+        size = os.path.getsize(path)
+        super(USBFile, self).__init__(name, size)
+        self.path = path
+
+
+def build_folder(path):
+    """
+    Return the contents of a folder, recursively
+    :param path:
+    :return:
+    """
+    if not os.path.isdir(path):
+        return USBFile(path)
+    else:
+        usb_folder = USBFolder(path)
+        drive_folder_contents = os.listdir(path)
+        for item in drive_folder_contents:
+            print("Processing: ", item)
+            usb_folder.contents.append(build_folder(os.path.join(path, item)))
+    return usb_folder
 
 
 class DFDevice:
