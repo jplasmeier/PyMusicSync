@@ -14,8 +14,16 @@ def load_general_drive_folder_name():
     return "Media"
 
 
+def load_general_test_drive_folder_name():
+    return "Media Test"
+
+
 def load_general_usb_device_path():
     return "/Users/jgp/Documents/temp"
+
+
+def load_general_test_usb_device_path():
+    return "/Users/jgp/Dropbox/ProgrammingProjects/Python3/PyMusicSync/temp"
 
 
 def load_google_drive_folder_name():
@@ -35,7 +43,7 @@ def load_mode():
 
 
 def load_option_cache():
-    return True
+    return False
 
 
 def load_option_clean_unicode():

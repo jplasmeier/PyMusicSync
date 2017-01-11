@@ -12,7 +12,7 @@ import usb
 cache_drive = config.load_option_cache()
 
 
-def trad(drive, music_folder):
+def trad(drive, music_folder, usb_device_path):
     print("Traditional sync mode selected.")
     cache_path = config.load_trad_cache_path()
 
@@ -28,7 +28,6 @@ def trad(drive, music_folder):
         pickle.dump(google_drive_library, fp)
 
     # USB Setup
-    usb_device_path = config.load_usb_device_path()
     usb_device_df_info = usb.get_df_info_for_device(usb_device_path)
     print("You are using the USB Device at path: {}".format(usb_device_df_info.mounted_on))
     print("Your USB Device has {0} mb free". format(int(usb_device_df_info.avail) / float(1024)))
@@ -67,11 +66,12 @@ def trad(drive, music_folder):
         sync.upload_collection_to_gdrive(drive, missing_from_drive_less.collection, usb_music_library.file_path, google_drive_library.collection)
 
 
-def general(drive, music_folder):
+def general(drive, drive_folder, usb_device_path, sync_mode):
     """
     A more general approach to syncing.
     Instead of forcing Library => Artist => Albums => content
     Just use a generic recursive diff/sync.
+    Also supports one-way and two-way sync.
     :return:
     """
     print("General sync mode selected.")
@@ -81,16 +81,15 @@ def general(drive, music_folder):
         with open(cache_path, 'rb') as fp:
             google_drive_folder = pickle.load(fp)
     else:
-        google_drive_folder = gdrive_folder.build_folder(drive, music_folder)
+        google_drive_folder = gdrive_folder.build_folder(drive, drive_folder)
 
     with open(cache_path, 'wb') as fp:
         pickle.dump(google_drive_folder, fp)
     print("Google Drive Folder: ", google_drive_folder)
 
-    usb_folder = usb.build_folder(config.load_general_usb_device_path())
+    usb_folder = usb.build_folder(usb_device_path)
     print("USB Folder: ", usb_folder)
 
-    sync_mode = config.load_sync_mode()
     clean_unicode = config.load_option_clean_unicode()
     delete = config.load_option_delete()
 
@@ -98,7 +97,7 @@ def general(drive, music_folder):
         source = google_drive_folder
         destination = usb_folder
         if delete:
-            sync.one_way_delete(source, destination)
+            sync.one_way_delete(source, destination, clean_unicode)
         else:
             sync.one_way(source, destination, clean_unicode)
     elif sync_mode == "two-way":
@@ -106,24 +105,36 @@ def general(drive, music_folder):
         sync.two_way(sources, clean_unicode)
 
 
-def main():
+def main(mode=None, sync_mode=None):
     # Load from config
-    mode = config.load_mode()
+    if mode is None:
+        mode = config.load_mode()
+
     if mode == "trad":
         folder_name = config.load_google_drive_folder_name()
+        usb_device_path = config.load_usb_device_path()
     elif mode == "general":
         folder_name = config.load_general_drive_folder_name()
+        usb_device_path = config.load_general_usb_device_path()
+    elif mode == "general_test":
+        folder_name = config.load_general_test_drive_folder_name()
+        usb_device_path = config.load_general_test_usb_device_path()
     else:
         raise Exception("Invalid Mode")
+
+    if sync_mode is None:
+        sync_mode = config.load_sync_mode()
+
     # Drive Setup
     gauth = gdrive.login()
     drive = GoogleDrive(gauth)
     music_folder = gdrive.get_folder_from_root(drive, folder_name)
 
     if mode == "trad":
-        trad(drive, music_folder)
-    elif mode == "general":
-        general(drive, music_folder)
+        trad(drive, music_folder, usb_device_path)
+    elif mode == "general" or mode == "general_test":
+        general(drive, music_folder, usb_device_path, sync_mode)
+
 
 if __name__ == '__main__':
     main() 

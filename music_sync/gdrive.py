@@ -1,8 +1,7 @@
+# gdrive.py
+# Google Drive Utilities
 from pydrive.auth import GoogleAuth
 import os
-
-
-# Drive Utilities
 
 
 def clean_unicode_title(drive_file):

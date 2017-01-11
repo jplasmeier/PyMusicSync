@@ -55,6 +55,9 @@ class USBFolder(general_sync_utils.Folder):
         super(USBFolder, self).__init__(name)
         self.path = path
 
+    def __str__(self):
+        return self.name
+
 
 class USBFile(general_sync_utils.File):
 
@@ -65,6 +68,9 @@ class USBFile(general_sync_utils.File):
         size = os.path.getsize(path)
         super(USBFile, self).__init__(name, size)
         self.path = path
+
+    def __str__(self):
+        return self.name
 
 
 def build_folder(path):

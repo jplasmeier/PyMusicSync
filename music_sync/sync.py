@@ -1,5 +1,6 @@
 # Do the actual sync in this module
 import config
+import copy
 import gdrive
 import gdrive_folder
 import general_sync_utils
@@ -36,10 +37,37 @@ def two_way(sources, clean_unicode):
     :return: The union? Maybe a status code?
     """
     union_folder = union(sources)
+    for folder in sources:
+        extra_files = get_missing_folders(union_folder, folder)
+        print("extra", extra_files)
 
 
 def two_way_delete(sources, clean_unicode):
     pass
+
+
+def get_missing_folders(union_folder, folder, difference_root=None):
+    """
+    Subtract folder from union_folder and return the difference.
+    :param union_folder:
+    :param folder:
+    :return:
+    """
+    if difference_root is None:
+        difference_root = general_sync_utils.Folder("difference root")
+    if isinstance(union_folder, general_sync_utils.File):
+        difference_root.contents.append(union_folder)
+        return difference_root
+    else:
+        for item in union_folder.contents:
+            if item not in folder.contents:
+                difference_root.contents.append(item)
+                return difference_root
+            else:
+                folder_item, = [i for i in folder.contents if i == item]
+                new_folder = get_missing_folders(item, folder_item)
+                difference_root.contents.append(new_folder)
+                return difference_root
 
 
 def union(folders):
@@ -55,6 +83,16 @@ def union(folders):
         # Omit the root folder
         for folder in root.contents:
             union_root = add_contents_recursive(union_root, folder)
+    return union_root
+
+
+def intersection(folders):
+    """
+    Given a list of folders, that is, general_sync_utils.Folder objects
+    Return the intersection of all folders.
+    :param folders: A list of general_sync_utils.Folder objects
+    :return:
+    """
 
 
 def add_contents_recursive(destination, source):
@@ -72,7 +110,8 @@ def add_contents_recursive(destination, source):
     else:
         if source not in destination.contents:
             print("Processing Folder: ", source.name)
-            new_folder = general_sync_utils.Folder(source.name)
+            new_folder = copy.deepcopy(source)
+            new_folder.contents = []
             destination.contents.append(new_folder)
             for item in source.contents:
                 add_contents_recursive(new_folder, item)

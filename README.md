@@ -5,7 +5,7 @@
 Ideally, you have a bunch of files on Google Drive, and you want to sync them to a USB Device. The current Google Drive client for Mac does not support this- probably for good reason.
 Google Drive's provided utility is aimed at replicating files that change with your Drive. For example, your My Documents folder might as well be a Google Drive folder.
 
-However, media files never change. This tool is meant to augment the official Google tool when you have a tiny laptop and a large USB device.
+However, media files are generally read-only. This tool is meant to augment the official Google tool when you have a tiny laptop and a large USB device.
 
 This software is in alpha and may not work as expected!
 

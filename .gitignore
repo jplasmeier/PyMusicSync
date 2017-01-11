@@ -6,3 +6,4 @@ client_id.json
 mycreds.txt
 .DS_Store
 test*.py
+.idea
