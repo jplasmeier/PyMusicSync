@@ -34,3 +34,25 @@ class File(NameEqualityMixin):
 
     def __str__(self):
         return self.name
+
+
+class SyncAssertions:
+
+    def assertFolderEquality(self, actual, expected):
+
+        for a_i in actual.contents:
+            if a_i not in expected.contents:
+                raise AssertionError("Item {0} not in folder {1}".format(a_i, expected))
+            if isinstance(a_i, Folder):
+                b_i, = [i for i in expected.contents if i.name == a_i.name]
+                print("Checking subfolders: ", a_i, b_i)
+                self.assertFolderEquality(a_i, b_i)
+        for b_i in expected.contents:
+            if b_i not in actual.contents:
+                raise AssertionError("Item {0} not in folder {1}".format(b_i, actual))
+            if isinstance(b_i, Folder):
+                a_i, = [i for i in actual.contents if i.name == b_i.name]
+                print("Checking subfolders: ", a_i, b_i)
+                self.assertFolderEquality(a_i, b_i)
+
+        return

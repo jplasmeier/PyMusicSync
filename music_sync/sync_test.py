@@ -19,15 +19,26 @@ def get_file_four():
     return general_sync_utils.File("File Four", 23)
 
 
-def get_subfolder_one():
+def get_subfolder_one_3():
+    subfolder_one = general_sync_utils.Folder("Subfolder One")
+    file_three = get_file_three()
+    subfolder_one.contents.append(file_three)
+    return subfolder_one
+
+def get_subfolder_one_4():
+    subfolder_one = general_sync_utils.Folder("Subfolder One")
+    file_four = get_file_four()
+    subfolder_one.contents.append(file_four)
+    return subfolder_one
+
+def get_subfolder_one_1_3():
     subfolder_one = general_sync_utils.Folder("Subfolder One")
     file_one = get_file_one()
     file_three = get_file_three()
     subfolder_one.contents.extend([file_three, file_one])
     return subfolder_one
 
-
-def get_subfolder_one_star():
+def get_subfolder_one_3_4():
     subfolder_one_star = general_sync_utils.Folder("Subfolder One")
     file_three = get_file_three()
     file_four = get_file_four()
@@ -53,10 +64,21 @@ def get_union_of_folder_one_and_two():
     return expected_union
 
 
+def get_intersection_of_folder_one_and_two():
+    """
+    Expected: File One, Subfolder One (File Three)
+    :return:
+    """
+    expected_intersection = general_sync_utils.Folder("Intersection Root")
+    file_one = get_file_one()
+    subfolder_one = get_subfolder_one_3()
+    expected_intersection.contents.extend([file_one, subfolder_one])
+    return expected_intersection
+
 def get_test_folder_one():
     folder_one = general_sync_utils.Folder("Folder One")
     file_one = get_file_one()
-    subfolder_one = get_subfolder_one()
+    subfolder_one = get_subfolder_one_1_3()
     folder_one.contents.extend([file_one, subfolder_one])
     return folder_one
 
@@ -65,10 +87,21 @@ def get_test_folder_two():
     folder_two = general_sync_utils.Folder("Folder Two")
     file_one = get_file_one()
     file_two = get_file_two()
-    subfolder_one_star = get_subfolder_one_star()
+    subfolder_one_star = get_subfolder_one_3_4()
 
     folder_two.contents.extend([file_one, file_two, subfolder_one_star])
     return folder_two
+
+
+def get_expected_union_minus_one():
+    """
+    Union - One: Subfolder One (File Three)
+    :return:
+    """
+    expected_union = general_sync_utils.Folder("Difference Root")
+    subfolder_one = get_subfolder_one_4()
+    expected_union.contents.append(subfolder_one)
+    return expected_union
 
 
 class TestGetClosestIndex(unittest.TestCase):
@@ -81,15 +114,13 @@ class TestGetClosestIndex(unittest.TestCase):
         self.assertEqual(actual, expected)
 
 
-class TestUnion(unittest.TestCase):
+class TestUnion(unittest.TestCase, general_sync_utils.SyncAssertions):
 
     def test_union_two_folders(self):
         """
-        Folder One: File One, Subfolder One
-        Folder Two: File One, File Two, Subfolder One*
-        Subfolder One: File Three, File One
-        Subfolder One*: File Three, File Four
-        Expected: File One, File Two, Subfolder One* + File One
+        Folder One: File One, Subfolder One (File One, File Three)
+        Folder Two: File One, File Two, Subfolder One (File One, File Four)
+        Expected: File One, File Two, Subfolder One (File One, File Three, File Four)
         :return:
         """
 
@@ -99,6 +130,44 @@ class TestUnion(unittest.TestCase):
         expected_folder = get_union_of_folder_one_and_two()
 
         actual = sync.union([folder_one, folder_two])
-        print("Actual Contents: ", [str(c) for c in actual.contents])
-        print("Expected Contents: ", [str(c) for c in expected_folder.contents])
-        # TODO: Write general assertion to recursively check name equality
+        self.assertFolderEquality(actual, expected_folder)
+
+
+class TestIntersection(unittest.TestCase, general_sync_utils.SyncAssertions):
+
+    def test_intersect_two_folders(self):
+        """
+        Folder One:     File One, Subfolder One (File One, File Three)
+        Folder Two:     File One, File Two, Subfolder One (File One, File Four)
+        Expected:       File One, Subfolder One (File Three)
+        :return:
+        """
+        folder_one = get_test_folder_one()
+        folder_two = get_test_folder_two()
+
+        expected_folder = get_intersection_of_folder_one_and_two()
+
+        actual = sync.intersection([folder_one, folder_two])
+        self.assertFolderEquality(actual, expected_folder)
+        
+
+class TestGetMissingFolders(unittest.TestCase, general_sync_utils.SyncAssertions):
+
+    def test_get_missing_folders_union(self):
+        """
+        Folder One:  File One, Subfolder One (File One, File Three)
+        Folder Two:  File One, File Two, Subfolder One (File One, File Four)
+        Union:       File One, Subfolder One (File One, File Three, File Four)
+        Union - One: Subfolder One (File Four)
+        :return:
+        """
+        folder_one = get_test_folder_one()
+        folder_two = get_test_folder_two()
+
+        expected_union_minus_one = get_expected_union_minus_one()
+
+        union_folder = sync.union([folder_one, folder_two])
+        actual_union_minus_one = sync.get_missing_folders(union_folder, folder_one)
+        print("Actual Contents: ", [str(c) for c in actual_union_minus_one.contents])
+        print("Expected Contents: ", [str(c) for c in expected_union_minus_one.contents])
+        self.assertFolderEquality(actual_union_minus_one, expected_union_minus_one)

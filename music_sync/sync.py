@@ -54,7 +54,7 @@ def get_missing_folders(union_folder, folder, difference_root=None):
     :return:
     """
     if difference_root is None:
-        difference_root = general_sync_utils.Folder("difference root")
+        difference_root = general_sync_utils.Folder("Difference Root")
     if isinstance(union_folder, general_sync_utils.File):
         difference_root.contents.append(union_folder)
         return difference_root
@@ -86,13 +86,30 @@ def union(folders):
     return union_root
 
 
-def intersection(folders):
+def intersection(folders, intersection_root=None):
     """
     Given a list of folders, that is, general_sync_utils.Folder objects
     Return the intersection of all folders.
     :param folders: A list of general_sync_utils.Folder objects
     :return:
     """
+    if intersection_root is None:
+        intersection_root = general_sync_utils.Folder("Intersection Root")
+    for root in folders:
+        # Omit the root
+        for item in root.contents:
+            cousins = [] # items in other folders with same name
+            for folder in folders:
+                if item in folder.contents:
+                    cousin, = [i for i in folder.contents if i == item]
+                    cousins.append(cousin)
+            if len(cousins) == len(folders) and item not in intersection_root.contents:
+                if isinstance(item, general_sync_utils.File):
+                    intersection_root.contents.append(item)
+                elif isinstance(item, general_sync_utils.Folder):
+                    subfolder = general_sync_utils.Folder(item.name)
+                    intersection_root.contents.append(intersection(cousins, subfolder))
+    return intersection_root
 
 
 def add_contents_recursive(destination, source):
