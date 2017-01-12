@@ -99,8 +99,9 @@ def get_expected_union_minus_one():
     :return:
     """
     expected_union = general_sync_utils.Folder("Difference Root")
+    file_two = get_file_two()
     subfolder_one = get_subfolder_one_4()
-    expected_union.contents.append(subfolder_one)
+    expected_union.contents.extend([file_two, subfolder_one])
     return expected_union
 
 
@@ -149,7 +150,7 @@ class TestIntersection(unittest.TestCase, general_sync_utils.SyncAssertions):
 
         actual = sync.intersection([folder_one, folder_two])
         self.assertFolderEquality(actual, expected_folder)
-        
+
 
 class TestGetMissingFolders(unittest.TestCase, general_sync_utils.SyncAssertions):
 
@@ -157,8 +158,8 @@ class TestGetMissingFolders(unittest.TestCase, general_sync_utils.SyncAssertions
         """
         Folder One:  File One, Subfolder One (File One, File Three)
         Folder Two:  File One, File Two, Subfolder One (File One, File Four)
-        Union:       File One, Subfolder One (File One, File Three, File Four)
-        Union - One: Subfolder One (File Four)
+        Union:       File One, File Two, Subfolder One (File One, File Three, File Four)
+        Union - One: File Two, Subfolder One (File Four)
         :return:
         """
         folder_one = get_test_folder_one()

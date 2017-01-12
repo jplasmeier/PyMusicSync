@@ -58,16 +58,20 @@ def get_missing_folders(union_folder, folder, difference_root=None):
     if isinstance(union_folder, general_sync_utils.File):
         difference_root.contents.append(union_folder)
         return difference_root
-    else:
+    elif isinstance(union_folder, general_sync_utils.Folder):
         for item in union_folder.contents:
-            if item not in folder.contents:
+            if isinstance(item, general_sync_utils.File) and item not in folder.contents:
                 difference_root.contents.append(item)
-                return difference_root
-            else:
-                folder_item, = [i for i in folder.contents if i == item]
-                new_folder = get_missing_folders(item, folder_item)
-                difference_root.contents.append(new_folder)
-                return difference_root
+            elif isinstance(item, general_sync_utils.Folder):
+                if item in folder.contents:
+                    folder_item, = [i for i in folder.contents if i == item]
+                else:
+                    folder_item = general_sync_utils.Folder("Folder Item")
+                sub_folder = general_sync_utils.Folder(item.name)
+                difference_root.contents.append(get_missing_folders(item, folder_item, sub_folder))
+        return difference_root
+    else:
+        return difference_root
 
 
 def union(folders):
