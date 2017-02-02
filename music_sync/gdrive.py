@@ -92,21 +92,6 @@ def get_file_ext_type(drive_file):
         return 'other'
 
 
-# TODO: this is broken, make recursive
-def get_folder_size_drive(drive, album_id):
-    """
-    Gets the size of an album in Drive.
-    album_id: string containing GoogleDriveFile id of an album_id folder
-    """
-    tracks = list_folder(drive, album_id)
-    size = 0
-    for track in tracks:
-        file_size = int(track["quotaBytesUsed"])
-        if file_size is not None:
-            size += file_size
-    return size
-
-
 def list_folder(drive, folder_id):
     """
     Lists contents of a GoogleDriveFile that is a folder

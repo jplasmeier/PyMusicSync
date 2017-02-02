@@ -13,9 +13,6 @@ class DriveFolder(general_sync_utils.Folder):
         return self.drive_file["title"]
 
 
-
-
-
 class DriveFile(general_sync_utils.File):
 
     def __init__(self, drive_file):

@@ -47,8 +47,16 @@ def two_way(drive, drive_root, usb_root, usb_path, clean_unicode):
     usb.upload_contents(drive, missing_from_drive, drive_root)
 
 
-
-def two_way_delete(sources, clean_unicode):
+def two_way_delete(drive, drive_root, usb_root, usb_path, clean_unicode):
+    """
+    TODO: Implement this. First need to implement delete on both Folder subclasses.
+    :param drive:
+    :param drive_root:
+    :param usb_root:
+    :param usb_path:
+    :param clean_unicode:
+    :return:
+    """
     pass
 
 
@@ -389,17 +397,3 @@ def get_folders_from_path(path):
         if os.path.isdir(item_path) and not item.startswith('.'):
             sub_dirs.append(item)
     return sorted(sub_dirs, key=lambda s: s.lower())
-
-
-def upload_collection_to_gdrive(drive, sync_collection, usb_path, drive_collection):
-    for artist_name in sync_collection:
-        if artist_name in drive_collection:
-            drive_artist = drive_collection[artist_name].drive_file
-        else:
-            upload_to = gdrive.get_folder_from_root(drive, config.load_google_drive_folder_name())
-            drive_artist = gdrive.create_folder(drive, artist_name, upload_to['id'])
-
-        artist_path = os.path.join(usb_path, artist_name)
-        for album_item in sync_collection[artist_name].albums:
-            album_path = os.path.join(artist_path, album_item.name)
-            gdrive.upload_recursive(drive, album_item.name, album_path, drive_artist)
