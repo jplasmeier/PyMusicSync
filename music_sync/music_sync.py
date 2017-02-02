@@ -101,8 +101,7 @@ def general(drive, drive_folder, usb_device_path, sync_mode):
         else:
             sync.one_way(source, destination, clean_unicode)
     elif sync_mode == "two-way":
-        sources = [google_drive_folder, usb_folder]
-        sync.two_way(sources, clean_unicode)
+        sync.two_way(drive, google_drive_folder, usb_folder, usb_device_path, clean_unicode)
 
 
 def main(mode=None, sync_mode=None):

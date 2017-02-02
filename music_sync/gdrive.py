@@ -164,6 +164,7 @@ def clean_unicode(name):
         return name
 
 
+# Why child??
 def download_file(child, download_to):
     download_path = os.path.join(download_to, child['title'])
     print('Downloading file {0} to: {1}'.format(child['title'], download_path))
@@ -196,16 +197,16 @@ def upload_recursive(drive, upload_name, upload_path, upload_to):
     return
 
 
-def upload_file(drive, file_name, file_path, parent):
+def upload_file(drive, file_name, file_path, parent_drive_file):
     """
     Uploads a file with a given parent.
     :param file_name: The name of the file to upload
     :param file_path: The local path of the file being uploaded.
-    :param parent: The GoogleDriveFile of the parent
+    :param parent_drive_file: The GoogleDriveFile of the parent
     :return:
     """
-    print('Uploading file {0} to: {1}'.format(file_path, parent['title']))
-    new_drive_file = drive.CreateFile({'title': file_name, 'parents': [{'id': parent['id']}]})
+    print('Uploading file {0} to: {1}'.format(file_path, parent_drive_file['title']))
+    new_drive_file = drive.CreateFile({'title': file_name, 'parents': [{'id': parent_drive_file['id']}]})
     new_drive_file.SetContentFile(file_path)
     new_drive_file.Upload()
     return

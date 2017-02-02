@@ -4,6 +4,7 @@
 # License: MIT License
 from subprocess import CalledProcessError, getoutput
 import general_sync_utils
+import gdrive
 import logger
 import music_sync_utils
 import os
@@ -88,6 +89,31 @@ def build_folder(path):
             print("Processing: ", item)
             usb_folder.contents.append(build_folder(os.path.join(path, item)))
     return usb_folder
+
+
+def upload_contents(drive, usb_folder, drive_folder):
+    """
+    Upload the contents of the given usb folder to Google Drive.
+    :param drive:
+    :param usb_folder:
+    :param drive_folder:
+    :return:
+    """
+    if isinstance(usb_folder, USBFile):
+        gdrive.upload_file(drive, usb_folder.name, usb_folder.path, drive_folder)
+        return usb_folder
+    elif isinstance(usb_folder, general_sync_utils.Folder):
+        for item in usb_folder.contents:
+            if isinstance(item, general_sync_utils.Folder):
+                if not item in drive_folder.contents:
+                    new_folder = gdrive.create_folder(drive, item.name, drive_folder.drive_file['id'])
+                else:
+                    new_folder, = [f for f in drive_folder.contents if f == item]
+                upload_contents(drive, item, new_folder)
+            elif isinstance(item, USBFile):
+                gdrive.upload_file(drive, item.name, item.path, drive_folder.drive_file)
+        return drive_folder
+    return drive_folder
 
 
 class DFDevice:

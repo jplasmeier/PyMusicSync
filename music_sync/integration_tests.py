@@ -12,4 +12,4 @@ class TestOneWayDriveToUSB:
     Test that one-way sync from Drive to USB works.
     So, everything in Drive should also be in USB.
     """
-    music_sync.main("general_test", "one-way")
+    music_sync.main("general_test", "two-way")

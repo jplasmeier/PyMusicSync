@@ -25,7 +25,7 @@ def one_way_delete(source, destination, clean_unicode):
     pass
 
 
-def two_way(sources, clean_unicode):
+def two_way(drive, drive_root, usb_root, usb_path, clean_unicode):
     """
     Omni-directional sync across two or more devices.
     Sets each device equal to the union of all devices.
@@ -36,39 +36,47 @@ def two_way(sources, clean_unicode):
     :param clean_unicode: If true, clean unicode names on Drive folders/files.
     :return: The union? Maybe a status code?
     """
-    union_folder = union(sources)
-    for folder in sources:
-        extra_files = get_missing_folders(union_folder, folder)
-        print("extra", extra_files)
+    union_folder = union([drive_root, usb_root])
+    missing_from_drive = subtraction(union_folder, drive_root)
+    missing_from_usb = subtraction(union_folder, usb_root)
+
+    # do this to not download "Difference Root"
+    for item in missing_from_usb.contents:
+        gdrive_folder.download_contents(drive, item, usb_path)
+
+    usb.upload_contents(drive, missing_from_drive, drive_root)
+
 
 
 def two_way_delete(sources, clean_unicode):
     pass
 
 
-def get_missing_folders(union_folder, folder, difference_root=None):
+def subtraction(a, b, difference_root=None):
     """
     Subtract folder from union_folder and return the difference.
-    :param union_folder:
-    :param folder:
+    :param a:
+    :param b:
     :return:
     """
     if difference_root is None:
         difference_root = general_sync_utils.Folder("Difference Root")
-    if isinstance(union_folder, general_sync_utils.File):
-        difference_root.contents.append(union_folder)
+    if isinstance(a, general_sync_utils.File):
+        difference_root.contents.append(a)
         return difference_root
-    elif isinstance(union_folder, general_sync_utils.Folder):
-        for item in union_folder.contents:
-            if isinstance(item, general_sync_utils.File) and item not in folder.contents:
+    elif isinstance(a, general_sync_utils.Folder):
+        for item in a.contents:
+            if isinstance(item, general_sync_utils.File) and item not in b.contents:
                 difference_root.contents.append(item)
             elif isinstance(item, general_sync_utils.Folder):
-                if item in folder.contents:
-                    folder_item, = [i for i in folder.contents if i == item]
+                if item in b.contents:
+                    folder_item, = [i for i in b.contents if i == item]
                 else:
-                    folder_item = general_sync_utils.Folder("Folder Item")
+                    folder_item = general_sync_utils.Folder("Folder Item")  # make a dummy folder to subtract against
                 sub_folder = general_sync_utils.Folder(item.name)
-                difference_root.contents.append(get_missing_folders(item, folder_item, sub_folder))
+                difference_subfolder = subtraction(item, folder_item, sub_folder)
+                if difference_subfolder.contents:
+                    difference_root.contents.append(difference_subfolder)
         return difference_root
     else:
         return difference_root
@@ -125,12 +133,10 @@ def add_contents_recursive(destination, source):
     """
     if isinstance(source, general_sync_utils.File):
         if source not in destination.contents:
-            print("Adding file: ", source.name)
             destination.contents.append(source)
         return destination
     else:
         if source not in destination.contents:
-            print("Processing Folder: ", source.name)
             new_folder = copy.deepcopy(source)
             new_folder.contents = []
             destination.contents.append(new_folder)

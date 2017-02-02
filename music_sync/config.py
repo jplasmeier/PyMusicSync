@@ -23,7 +23,7 @@ def load_general_usb_device_path():
 
 
 def load_general_test_usb_device_path():
-    return "/Users/jgp/Dropbox/ProgrammingProjects/Python3/PyMusicSync/temp"
+    return "/Users/jgp/Dropbox/ProgrammingProjects/Python3/PyMusicSync/Media Test"
 
 
 def load_google_drive_folder_name():
