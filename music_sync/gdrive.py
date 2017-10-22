@@ -193,7 +193,11 @@ def upload_file(drive, file_name, file_path, parent_drive_file):
     print('Uploading file {0} to: {1}'.format(file_path, parent_drive_file['title']))
     new_drive_file = drive.CreateFile({'title': file_name, 'parents': [{'id': parent_drive_file['id']}]})
     new_drive_file.SetContentFile(file_path)
-    new_drive_file.Upload()
+    try:
+        new_drive_file.Upload()
+    except Exception as ex:
+        print("Exception of type {0} thrown: \n".format(type(ex), ex))
+        print("File name: ", file_name)
     return
 
 

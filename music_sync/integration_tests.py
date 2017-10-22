@@ -11,5 +11,6 @@ class TestOneWayDriveToUSB:
     """
     Test that one-way sync from Drive to USB works.
     So, everything in Drive should also be in USB.
+    TODO: Fix by pulling out old-style modes from config
     """
-    music_sync.main("general_test", "two-way")
+    music_sync.main("Media Test", "/Users/jgp/Dropbox/Documents/ProgrammingProjects/Python3/PyMusicSync/Media Test")

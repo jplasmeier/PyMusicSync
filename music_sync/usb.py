@@ -2,11 +2,11 @@
 # A module to find and save USB device information on a Mac.
 # Author: J. Plasmeier | jplasmeier@gmail.com
 # License: MIT License
-from subprocess import CalledProcessError, getoutput
+import config
 import general_sync_utils
 import gdrive
+import gdrive_folder
 import os
-import sys
 
 
 class USBFolder(general_sync_utils.Folder):
@@ -46,8 +46,13 @@ def build_folder(path):
         usb_folder = USBFolder(path)
         drive_folder_contents = os.listdir(path)
         for item in drive_folder_contents:
-            print("Processing: ", item)
-            usb_folder.contents.append(build_folder(os.path.join(path, item)))
+            if config.ignore_dotfiles() and item.startswith('.'):
+                continue
+            else:
+                print("processing:" , item)
+                new_usb_folder = build_folder(os.path.join(path, item))
+                usb_folder.contents_map[new_usb_folder.name] = new_usb_folder
+                usb_folder.contents.append(build_folder(os.path.join(path, item)))
     return usb_folder
 
 
@@ -59,16 +64,26 @@ def upload_contents(drive, usb_folder, drive_folder):
     :param drive_folder:
     :return:
     """
+    if not isinstance(drive_folder, gdrive_folder.DriveFolder):
+        return
     if isinstance(usb_folder, USBFile):
-        gdrive.upload_file(drive, usb_folder.name, usb_folder.path, drive_folder)
+        gdrive.upload_file(drive, usb_folder.name, usb_folder.path, drive_folder.drive_file)
         return usb_folder
     elif isinstance(usb_folder, general_sync_utils.Folder):
         for item in usb_folder.contents:
+            # Why wasn't this isintance(item, g_s_u.Folder)?
             if isinstance(item, general_sync_utils.Folder):
                 if not item in drive_folder.contents:
-                    new_folder = gdrive.create_folder(drive, item.name, drive_folder.drive_file['id'])
+                    print("Creating folder: ", item.name)
+                    drive_file = gdrive.create_folder(drive, item.name, drive_folder.drive_file['id'])
+                    new_folder = gdrive_folder.DriveFolder(drive_file)
+                    # but what about its contents? i think its ok to be empty at initialization- it is empty
+                    # but what about as it's being filled?
                 else:
+                    # this nonsense should be: new_folder = drive_folder.contents.get(item)
                     new_folder, = [f for f in drive_folder.contents if f == item]
+                    if item not in drive_folder.contents:
+                        drive_folder.contents.add(item)
                 upload_contents(drive, item, new_folder)
             elif isinstance(item, USBFile):
                 gdrive.upload_file(drive, item.name, item.path, drive_folder.drive_file)

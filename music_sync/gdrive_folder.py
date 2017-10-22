@@ -1,3 +1,4 @@
+import config
 import gdrive
 import general_sync_utils
 import os
@@ -35,10 +36,15 @@ def build_folder(drive, drive_file):
         return DriveFile(drive_file)
     else:
         drive_folder = DriveFolder(drive_file)
+        drive_folder.drive_file = drive_file
         drive_folder_contents = gdrive.list_folder(drive, drive_file["id"])
-        for item in drive_folder_contents:
-            print("Processing: ", item['title'])
-            drive_folder.contents.append(build_folder(drive, item))
+        for index, item in enumerate(drive_folder_contents):
+            if config.ignore_dotfiles() and item["title"].startswith('.'):
+                continue
+            else:
+                new_drive_folder = build_folder(drive, item)
+                drive_folder.contents.append(new_drive_folder)
+                drive_folder.contents_map[new_drive_folder.name] = new_drive_folder
     return drive_folder
 
 

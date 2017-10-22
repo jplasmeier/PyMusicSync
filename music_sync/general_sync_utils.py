@@ -21,6 +21,9 @@ class Folder(NameEqualityMixin):
     def __init__(self, name):
         self.name = name
         self.contents = []
+        # similar to contents
+        # but name:object pairs
+        self.contents_map = {}
 
     def __str__(self):
         return "{0}: {1}".format(self.name, [str(c) for c in self.contents])

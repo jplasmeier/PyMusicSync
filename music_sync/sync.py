@@ -78,7 +78,10 @@ def subtraction(a, b, difference_root=None):
                 difference_root.contents.append(item)
             elif isinstance(item, general_sync_utils.Folder):
                 if item in b.contents:
-                    folder_item, = [i for i in b.contents if i == item]
+                    folder_item = b.contents_map[item.name]
+                    if folder_item is None:
+                        print("contents map didn't work???")
+                        folder_item = next(i for i in b.contents if i == item)
                 else:
                     folder_item = general_sync_utils.Folder("Folder Item")  # make a dummy folder to subtract against
                 sub_folder = general_sync_utils.Folder(item.name)

@@ -15,12 +15,12 @@ There are a few different modes and options that Mass Media Sync supports.
 
 #### Modes:
 
-|Name|Usage|Definition|
-|----|-----|----------|
-|One Way|one-way drive usb|drive = drive, usb = drive ∪ usb|
-|One Way w/ delete|one-way drive usb -d|drive = drive, usb = drive|
-|Two Way|two-way drive usb|drive = drive ∪ usb, usb = drive ∪ usb|
-|Two Way w/ delete|two-way drive usb -d|drive = drive ∩ usb, usb = drive ∩ usb|
+|Name|Usage|Definition|Implemented?|
+|----|-----|----------|------------|
+|One Way|one-way drive usb|drive = drive, usb = drive ∪ usb||
+|One Way w/ delete|one-way drive usb -d|drive = drive, usb = drive||
+|Two Way|two-way drive usb|drive = drive ∪ usb, usb = drive ∪ usb|Yes!|
+|Two Way w/ delete|two-way drive usb -d|drive = drive ∩ usb, usb = drive ∩ usb||
 
 **One Way**
 
@@ -46,6 +46,16 @@ Remove any content not on all devices from all devices.
 |Delete|-d, --delete|Deletes "extra" files. Behavior depends on the mode. See above.|
 |Cache|-c, --cache|Caches any Drive libraries being synced. WARNING: any changes to cached drive libraries made through the standard Google Drive client **will not** be reflected upon sync! Use with caution.
 |Clean Unicode|--clean-unicode|Some Unicode strings cause issues with creating directories. This will go through and set all file/folder names to their "clean" equivalent.|
+
+#### Set Operations
+
+To provide sync functionality, several set operations are implemented:
+
+|Operation|Definition|Implemented?|Test Coverage?|
+|---------|----------|------------|--------------|
+|Intersection|Elements such that the element exists in both/all sets.|Many|Partial|
+|Union|Elements such that the element exists in any/either set.|Many|Partial|
+|Subtraction|The elements of a set such that no element exists in any/another set.|Two|Partial|
 
 ### Running PyMusicSync
 

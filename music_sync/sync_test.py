@@ -153,6 +153,7 @@ class TestUnion(unittest.TestCase, general_sync_utils.SyncAssertions):
 
         actual = sync.union([folder_one, folder_two])
         self.assertFolderEquality(actual, expected_folder)
+        print("Test Union Two Folders PASSED!")
 
 
 class TestIntersection(unittest.TestCase, general_sync_utils.SyncAssertions):
@@ -171,6 +172,7 @@ class TestIntersection(unittest.TestCase, general_sync_utils.SyncAssertions):
 
         actual = sync.intersection([folder_one, folder_two])
         self.assertFolderEquality(actual, expected_folder)
+        print("Test Intersect Two Folders PASSED!")
 
 
 class TestSubtraction(unittest.TestCase, general_sync_utils.SyncAssertions):
@@ -207,9 +209,8 @@ class TestSubtraction(unittest.TestCase, general_sync_utils.SyncAssertions):
 
         intersection_folder = sync.intersection([folder_one, folder_two])
         actual_one_minus_intersection = sync.subtraction(folder_one, intersection_folder)
-        print("Actual Contents: ", [str(c) for c in actual_one_minus_intersection.contents])
-        print("Expected Contents: ", [str(c) for c in expected_one_minus_intersection.contents])
         self.assertFolderEquality(actual_one_minus_intersection, expected_one_minus_intersection)
+        print("Test Subtraction on Intersection PASSED!")
 
     def test_subtraction_on_intersection_empty_result(self):
         """
@@ -226,6 +227,6 @@ class TestSubtraction(unittest.TestCase, general_sync_utils.SyncAssertions):
 
         intersection_folder = sync.intersection([folder_one, folder_two])
         actual_one_minus_intersection = sync.subtraction(intersection_folder, folder_one)
-        print("Actual Contents: ", [str(c) for c in actual_one_minus_intersection.contents])
-        print("Expected Contents: ", [str(c) for c in expected_one_minus_intersection.contents])
+
         self.assertFolderEquality(actual_one_minus_intersection, expected_one_minus_intersection)
+        print("Test Subtraction on Intersection Empty PASSED!")

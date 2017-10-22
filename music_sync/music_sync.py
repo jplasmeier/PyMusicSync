@@ -5,9 +5,12 @@ import gdrive_folder
 import os
 import pickle
 import sync
+import sys
 import usb
 
-cache_drive = config.load_option_cache()
+
+cache_drive = config.cache_drive_metadata()
+timing_mode = config.timing_mode()
 
 
 def general(drive, drive_folder, usb_device_path, sync_mode):
@@ -25,6 +28,7 @@ def general(drive, drive_folder, usb_device_path, sync_mode):
         with open(cache_path, 'rb') as fp:
             google_drive_folder = pickle.load(fp)
     else:
+        print("Building list of Google Drive files...")
         google_drive_folder = gdrive_folder.build_folder(drive, drive_folder)
 
     with open(cache_path, 'wb') as fp:
@@ -48,22 +52,28 @@ def general(drive, drive_folder, usb_device_path, sync_mode):
         sync.two_way(drive, google_drive_folder, usb_folder, usb_device_path, clean_unicode)
 
 
-def main(mode=None, sync_mode=None):
-    # Load from config
-    if mode is None:
-        mode = config.load_mode()
-
-    if mode == "general":
+def main(folder_name=None, usb_device_path=None, sync_mode=None):
+    
+    if folder_name is None:
         folder_name = config.load_general_drive_folder_name()
-        usb_device_path = config.load_general_usb_device_path()
-    elif mode == "general_test":
-        folder_name = config.load_general_test_drive_folder_name()
-        usb_device_path = config.load_general_test_usb_device_path()
-    else:
-        raise Exception("Invalid Mode")
 
+    if usb_device_path is None:
+        usb_device_path = config.load_general_usb_device_path()
+
+    if folder_name is None and usb_device_path is None and len(sys.argv) < 3:
+        raise Exception("Source and destination must be specified.")
+    elif len(sys.argv) >= 4:
+        if sync_mode is None:
+            sync_mode = sys.argv[3]
+    else:
+        if folder_name is None:
+            folder_name = sys.argv[1]
+        if usb_device_path is None:
+            usb_device_path = sys.argv[2]
+
+    # default sync mode is two-way
     if sync_mode is None:
-        sync_mode = config.load_sync_mode()
+        sync_mode = "two-way"
 
     # Drive Setup
     gauth = gdrive.login()
