@@ -49,7 +49,6 @@ def build_folder(path):
             if config.ignore_dotfiles() and item.startswith('.'):
                 continue
             else:
-                print("processing:" , item)
                 new_usb_folder = build_folder(os.path.join(path, item))
                 usb_folder.contents_map[new_usb_folder.name] = new_usb_folder
                 usb_folder.contents.append(build_folder(os.path.join(path, item)))

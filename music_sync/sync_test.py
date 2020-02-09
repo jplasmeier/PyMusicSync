@@ -26,33 +26,35 @@ def get_empty_difference_result():
 def get_subfolder_one_1():
     subfolder_one = general_sync_utils.Folder("Subfolder One")
     file_one = get_file_one()
-    subfolder_one.contents.append(file_one)
+    subfolder_one.contents[file_one.name] = file_one
     return subfolder_one
 
 def get_subfolder_one_3():
     subfolder_one = general_sync_utils.Folder("Subfolder One")
     file_three = get_file_three()
-    subfolder_one.contents.append(file_three)
+    subfolder_one.contents[file_three.name] = file_three
     return subfolder_one
 
 def get_subfolder_one_4():
     subfolder_one = general_sync_utils.Folder("Subfolder One")
     file_four = get_file_four()
-    subfolder_one.contents.append(file_four)
+    subfolder_one.contents[file_four.name] = file_four
     return subfolder_one
 
 def get_subfolder_one_1_3():
     subfolder_one = general_sync_utils.Folder("Subfolder One")
     file_one = get_file_one()
     file_three = get_file_three()
-    subfolder_one.contents.extend([file_three, file_one])
+    subfolder_one.contents.update({file_three.name: file_three,
+                                   file_one.name: file_one})
     return subfolder_one
 
 def get_subfolder_one_3_4():
     subfolder_one_star = general_sync_utils.Folder("Subfolder One")
     file_three = get_file_three()
     file_four = get_file_four()
-    subfolder_one_star.contents.extend([file_three, file_four])
+    subfolder_one_star.contents.update({file_three.name: file_three,
+                                        file_four: file_four})
     return subfolder_one_star
 
 
@@ -61,7 +63,9 @@ def get_union_of_subfolder_one_and_star():
     file_one = get_file_one()
     file_three = get_file_three()
     file_four = get_file_four()
-    subfolder_one_union.contents.extend([file_one, file_three, file_four])
+    subfolder_one_union.contents.update({file_one.name: file_one,
+                                         file_three.name: file_three,
+                                         file_four.name: file_four})
     return subfolder_one_union
 
 
@@ -70,7 +74,9 @@ def get_union_of_folder_one_and_two():
     file_one = get_file_one()
     file_two = get_file_two()
     subfolder_one_expected = get_union_of_subfolder_one_and_star()
-    expected_union.contents.extend([file_one, file_two, subfolder_one_expected])
+    expected_union.contents.update({file_one.name: file_one,
+                                    file_two.name: file_two,
+                                    subfolder_one_expected.name: subfolder_one_expected})
     return expected_union
 
 
@@ -82,14 +88,19 @@ def get_intersection_of_folder_one_and_two():
     expected_intersection = general_sync_utils.Folder("Intersection Root")
     file_one = get_file_one()
     subfolder_one = get_subfolder_one_3()
-    expected_intersection.contents.extend([file_one, subfolder_one])
+    expected_intersection.contents.update({file_one.name: file_one,
+                                           subfolder_one.name: subfolder_one})
     return expected_intersection
 
 def get_test_folder_one():
+    """
+    :return: Folder One -> {file_one, Subfolder_One -> {file_one, file_three}}
+    """
     folder_one = general_sync_utils.Folder("Folder One")
     file_one = get_file_one()
     subfolder_one = get_subfolder_one_1_3()
-    folder_one.contents.extend([file_one, subfolder_one])
+    folder_one.contents.update({file_one.name: file_one,
+                                subfolder_one.name: subfolder_one})
     return folder_one
 
 
@@ -99,7 +110,9 @@ def get_test_folder_two():
     file_two = get_file_two()
     subfolder_one_star = get_subfolder_one_3_4()
 
-    folder_two.contents.extend([file_one, file_two, subfolder_one_star])
+    folder_two.contents.update({file_one.name: file_one,
+                                file_two.name: file_two,
+                                subfolder_one_star.name: subfolder_one_star})
     return folder_two
 
 
@@ -111,7 +124,8 @@ def get_expected_union_minus_one():
     expected_subtraction = general_sync_utils.Folder("Difference Root")
     file_two = get_file_two()
     subfolder_one = get_subfolder_one_4()
-    expected_subtraction.contents.extend([file_two, subfolder_one])
+    expected_subtraction.contents.update({file_two.name: file_two,
+                                          subfolder_one.name: subfolder_one})
     return expected_subtraction
 
 
@@ -122,8 +136,21 @@ def get_expected_one_minus_intersection():
     """
     expected_subtraction = general_sync_utils.Folder("Difference Root")
     subfolder_one = get_subfolder_one_1()
-    expected_subtraction.contents.append(subfolder_one)
+    expected_subtraction.contents[subfolder_one.name] = subfolder_one
     return expected_subtraction
+
+
+def get_expected_intersection_folder():
+    """
+    Intersection:       File One, Subfolder One (File Three)
+    :return:
+    """
+    expected_intersection = general_sync_utils.Folder("Intersection Root")
+    file_one = get_file_one()
+    subfolder_one_3 = get_subfolder_one_3()
+    expected_intersection.contents[file_one.name] = file_one
+    expected_intersection.contents[subfolder_one_3.name] = subfolder_one_3
+    return expected_intersection
 
 
 class TestGetClosestIndex(unittest.TestCase):
@@ -151,7 +178,8 @@ class TestUnion(unittest.TestCase, general_sync_utils.SyncAssertions):
 
         expected_folder = get_union_of_folder_one_and_two()
 
-        actual = sync.union([folder_one, folder_two])
+        actual = sync.union({folder_one.name: folder_one,
+                             folder_two.name: folder_two})
         self.assertFolderEquality(actual, expected_folder)
         print("Test Union Two Folders PASSED!")
 
@@ -161,7 +189,7 @@ class TestIntersection(unittest.TestCase, general_sync_utils.SyncAssertions):
     def test_intersect_two_folders(self):
         """
         Folder One:     File One, Subfolder One (File One, File Three)
-        Folder Two:     File One, File Two, Subfolder One (File One, File Four)
+        Folder Two:     File One, File Two, Subfolder One (File Three, File Four)
         Expected:       File One, Subfolder One (File Three)
         :return:
         """
@@ -170,7 +198,8 @@ class TestIntersection(unittest.TestCase, general_sync_utils.SyncAssertions):
 
         expected_folder = get_intersection_of_folder_one_and_two()
 
-        actual = sync.intersection([folder_one, folder_two])
+        actual = sync.intersection({folder_one.name: folder_one,
+                                    folder_two.name: folder_two})
         self.assertFolderEquality(actual, expected_folder)
         print("Test Intersect Two Folders PASSED!")
 
@@ -190,14 +219,15 @@ class TestSubtraction(unittest.TestCase, general_sync_utils.SyncAssertions):
 
         expected_union_minus_one = get_expected_union_minus_one()
 
-        union_folder = sync.union([folder_one, folder_two])
+        union_folder = sync.union({folder_one.name: folder_one,
+                                   folder_two.name: folder_two})
         actual_union_minus_one = sync.subtraction(union_folder, folder_one)
         self.assertFolderEquality(actual_union_minus_one, expected_union_minus_one)
 
     def test_subtraction_on_intersection(self):
         """
         Folder One:         File One, Subfolder One (File One, File Three)
-        Folder Two:         File One, File Two, Subfolder One (File One, File Four)
+        Folder Two:         File One, File Two, Subfolder One (File Three, File Four)
         Intersection:       File One, Subfolder One (File Three)
         One - Intersection: Subfolder One (File One)
         :return:
@@ -205,9 +235,12 @@ class TestSubtraction(unittest.TestCase, general_sync_utils.SyncAssertions):
         folder_one = get_test_folder_one()
         folder_two = get_test_folder_two()
 
+        expected_intersection_folder = get_expected_intersection_folder()
         expected_one_minus_intersection = get_expected_one_minus_intersection()
 
-        intersection_folder = sync.intersection([folder_one, folder_two])
+        intersection_folder = sync.intersection({folder_one.name: folder_one,
+                                                 folder_two.name: folder_two})
+        self.assertFolderEquality(intersection_folder, expected_intersection_folder)
         actual_one_minus_intersection = sync.subtraction(folder_one, intersection_folder)
         self.assertFolderEquality(actual_one_minus_intersection, expected_one_minus_intersection)
         print("Test Subtraction on Intersection PASSED!")
@@ -225,7 +258,8 @@ class TestSubtraction(unittest.TestCase, general_sync_utils.SyncAssertions):
 
         expected_one_minus_intersection = get_empty_difference_result()
 
-        intersection_folder = sync.intersection([folder_one, folder_two])
+        intersection_folder = sync.intersection({folder_one.name: folder_one,
+                                                 folder_two.name: folder_two})
         actual_one_minus_intersection = sync.subtraction(intersection_folder, folder_one)
 
         self.assertFolderEquality(actual_one_minus_intersection, expected_one_minus_intersection)

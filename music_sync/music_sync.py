@@ -28,6 +28,7 @@ def general(drive, drive_folder, usb_device_path, sync_mode):
         with open(cache_path, 'rb') as fp:
             google_drive_folder = pickle.load(fp)
     else:
+        print("Google Drive folder: " + drive_folder['title'])
         print("Building list of Google Drive files...")
         google_drive_folder = gdrive_folder.build_folder(drive, drive_folder)
 
@@ -35,8 +36,8 @@ def general(drive, drive_folder, usb_device_path, sync_mode):
         pickle.dump(google_drive_folder, fp)
     print("Google Drive Folder: ", google_drive_folder)
 
+    print("Building USB Folder: ", usb_device_path)
     usb_folder = usb.build_folder(usb_device_path)
-    print("USB Folder: ", usb_folder)
 
     clean_unicode = config.load_option_clean_unicode()
     delete = config.load_option_delete()

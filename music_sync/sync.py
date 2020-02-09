@@ -68,26 +68,32 @@ def subtraction(a, b, difference_root=None):
     :return:
     """
     if difference_root is None:
+        print("setting diff_root")
         difference_root = general_sync_utils.Folder("Difference Root")
     if isinstance(a, general_sync_utils.File):
-        difference_root.contents.append(a)
+        print("a is a file (named: {0}), appending to diff_root".format(a.name))
+        difference_root.contents[a.name] = a
         return difference_root
     elif isinstance(a, general_sync_utils.Folder):
-        for item in a.contents:
-            if isinstance(item, general_sync_utils.File) and item not in b.contents:
-                difference_root.contents.append(item)
+        print("a is a folder (named: {0}), going thru contents".format(a.name))
+        for item in a.contents.values():
+            print("inspecting item: {0}".format(item))
+            if isinstance(item, general_sync_utils.File) and item.name not in b.contents:
+                # This might be a bug? Seems it should appending to a folder under diff_root
+                print("item {0} is a file, appending to diff_root")
+                difference_root.contents[item.name] = item
             elif isinstance(item, general_sync_utils.Folder):
-                if item in b.contents:
-                    folder_item = b.contents_map[item.name]
-                    if folder_item is None:
-                        print("contents map didn't work???")
-                        folder_item = next(i for i in b.contents if i == item)
+                print("item {0} is a Folder!, lets go thru contents")
+                if item.name in b.contents:
+                    print("item {0} is present in b.contents".format(item.name))
+                    print("for funsies, here's the contents_map of b: {0}".format(b.contents))
+                    folder_item = b.contents[item.name]
                 else:
                     folder_item = general_sync_utils.Folder("Folder Item")  # make a dummy folder to subtract against
                 sub_folder = general_sync_utils.Folder(item.name)
                 difference_subfolder = subtraction(item, folder_item, sub_folder)
                 if difference_subfolder.contents:
-                    difference_root.contents.append(difference_subfolder)
+                    difference_root.contents[difference_subfolder.name] = difference_subfolder
         return difference_root
     else:
         return difference_root
@@ -95,43 +101,52 @@ def subtraction(a, b, difference_root=None):
 
 def union(folders):
     """
-    Given a list of folders, that is, general_sync_utils.Folder objects
+    Given a dict of folders, that is, general_sync_utils.Folder objects
     Return the union of all folders.
     :param folders: A list of general_sync_utils.Folder objects
     :return:
     """
     # We allow devices to have different roots. Keep the contents of each root in Union Root.
     union_root = general_sync_utils.Folder("Union Root")
-    for root in folders:
+    for root in folders.values():
         # Omit the root folder
-        for folder in root.contents:
+        for folder in root.contents.values():
             union_root = add_contents_recursive(union_root, folder)
     return union_root
 
 
 def intersection(folders, intersection_root=None):
     """
-    Given a list of folders, that is, general_sync_utils.Folder objects
+    Given a dict of folders, that is, general_sync_utils.Folder objects
     Return the intersection of all folders.
-    :param folders: A list of general_sync_utils.Folder objects
-    :return:
+    :param folders: A dict of general_sync_utils.Folder objects
+    :return: A folder
     """
     if intersection_root is None:
         intersection_root = general_sync_utils.Folder("Intersection Root")
-    for root in folders:
+    for root in folders.values():
         # Omit the root
-        for item in root.contents:
-            cousins = [] # items in other folders with same name
-            for folder in folders:
-                if item in folder.contents:
-                    cousin, = [i for i in folder.contents if i == item]
-                    cousins.append(cousin)
-            if len(cousins) == len(folders) and item not in intersection_root.contents:
+        for item in root.contents.values():
+            cousins = {}  # items in other folders with same name
+            missing_cousin = False  # if one folder does not have, skip the rest
+            for folder in folders.values():
+                if item in folder.contents.values():
+                    cousins[folder.name] = folder.contents[item.name]
+                else:
+                    # One of the folders did not have the cousin
+                    missing_cousin = True
+                    if folder.name in cousins:
+                        # Clear out from cousins
+                        cousins.pop(folder.name)
+                    # Skip checking the rest of the folders
+                    break
+            if item.name in cousins.values() and not missing_cousin and item.name not in intersection_root.contents:
                 if isinstance(item, general_sync_utils.File):
-                    intersection_root.contents.append(item)
+                    intersection_root.contents[item.name] = item
                 elif isinstance(item, general_sync_utils.Folder):
                     subfolder = general_sync_utils.Folder(item.name)
-                    intersection_root.contents.append(intersection(cousins, subfolder))
+                    result = intersection(cousins, subfolder)
+                    intersection_root.contents[result.name] = result
     return intersection_root
 
 
@@ -142,21 +157,24 @@ def add_contents_recursive(destination, source):
     :param source:
     :return:
     """
+    print("adding contents, recursively for: dest {0} and source {1}".format(destination, source))
     if isinstance(source, general_sync_utils.File):
-        if source not in destination.contents:
-            destination.contents.append(source)
+        if source not in destination.contents.values():
+            destination.contents[source.name] = source
         return destination
     else:
-        if source not in destination.contents:
+        if source not in destination.contents.values():
             new_folder = copy.deepcopy(source)
-            new_folder.contents = []
-            destination.contents.append(new_folder)
-            for item in source.contents:
+            new_folder.contents = {new_folder.name: new_folder}
+            for item in source.contents.values():
+                # Ignore these folders
+                # if item.name == 'Dream Theater':
+                #    continue
                 add_contents_recursive(new_folder, item)
             return destination
         else:
-            source_in_destination, = [d for d in destination.contents if d.name == source.name]
-            for item in source.contents:
+            source_in_destination = destination.contents[source.name]
+            for item in source.contents.values():
                 add_contents_recursive(source_in_destination, item)
             return destination
 

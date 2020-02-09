@@ -2,7 +2,7 @@
 # similar to music_sync_utils but more general
 
 
-class NameEqualityMixin():
+class NameEqualityMixin:
 
     def __eq__(self, other):
         if isinstance(other, str):
@@ -20,13 +20,10 @@ class Folder(NameEqualityMixin):
 
     def __init__(self, name):
         self.name = name
-        self.contents = []
-        # similar to contents
-        # but name:object pairs
-        self.contents_map = {}
+        self.contents = {}
 
     def __str__(self):
-        return "{0}: {1}".format(self.name, [str(c) for c in self.contents])
+        return "Folder: {0}: {1}".format(self.name, [str(c) for c in self.contents.keys()])
 
 
 class File(NameEqualityMixin):
@@ -36,26 +33,26 @@ class File(NameEqualityMixin):
         self.size = size
 
     def __str__(self):
-        return self.name
+        return "File: {0}".format(self.name)
 
 
 class SyncAssertions:
 
     def assertFolderEquality(self, actual, expected):
 
-        for a_i in actual.contents:
-            if a_i not in expected.contents:
-                raise AssertionError("Item {0} not in folder {1}".format(a_i, expected))
-            if isinstance(a_i, Folder):
-                b_i, = [i for i in expected.contents if i.name == a_i.name]
-                print("Checking subfolders: ", a_i, b_i)
-                self.assertFolderEquality(a_i, b_i)
-        for b_i in expected.contents:
-            if b_i not in actual.contents:
-                raise AssertionError("Item {0} not in folder {1}".format(b_i, actual))
-            if isinstance(b_i, Folder):
-                a_i, = [i for i in actual.contents if i.name == b_i.name]
-                print("Checking subfolders: ", a_i, b_i)
-                self.assertFolderEquality(a_i, b_i)
+        for actual_item in actual.contents:
+            if actual_item not in expected.contents:
+                raise AssertionError("Actual Item {0} not in Expected Folder: {1}".format(actual_item, expected))
+            if isinstance(actual_item, Folder):
+                expected_item = expected.contents[actual_item.name]
+                print("Checking subfolders: ", actual_item, expected_item)
+                self.assertFolderEquality(actual_item, expected_item)
+        for expected_item in expected.contents:
+            if expected_item not in actual.contents:
+                raise AssertionError("Expected Item {0} not in Actual Folder {1}".format(expected_item, actual))
+            if isinstance(expected_item, Folder):
+                actual_item, = actual.contents[expected_item.name]
+                print("Checking subfolders: ", actual_item, expected_item)
+                self.assertFolderEquality(actual_item, expected_item)
 
         return
